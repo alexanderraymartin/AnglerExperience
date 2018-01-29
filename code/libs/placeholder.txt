@@ -1,0 +1,3 @@
+This folder will be for and external or precompiled libraries such as SFML, ASSIMP, and others.
+
+This file is a placeholder so that the folder is included as part of the git untill we have something to put inside. 
