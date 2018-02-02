@@ -3,29 +3,13 @@ cmake_minimum_required(VERSION 2.7)
 # Name of the project
 project(Angler_Experience)
 
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++1y")
 
-file(GLOB_RECURSE SOURCES "src/*.cpp")
-
-#Set up link targets
 set(GLEW_DIR "$ENV{GLEW_DIR}")
 if(NOT GLEW_DIR)
   message(FATAL_ERROR "Please point the environment variable GLEW_DIR to the root directory of your GLEW installation.")
 endif()
 
-if(WIN32)
-  # With prebuilt binaries
-  link_directories(${GLEW_DIR}/lib/Release/Win32)
-endif()
-
-# We don't really need to include header and resource files to build, but it's
-# nice to have them show up in IDEs.
-file(GLOB_RECURSE HEADERS "src/*.h" "src/*.hpp")
-file(GLOB_RECURSE GLSL "resources/*.vs" "resources/*.fs" "resources/*.gs" "resources/*.cs")
-
-add_executable(${CMAKE_PROJECT_NAME} ${SOURCES} ${HEADERS} ${GLSL})
-
-# Sets the APPTYPE constant so that the executable will compile. See core.h for context
-target_compile_definitions(${CMAKE_PROJECT_NAME} PUBLIC APPTYPE=ApplicationType::GAME)
 
 # Get the GLM environment variable. Since GLM is a header-only library, we
 # just need to add it to the include directory.
@@ -33,7 +17,7 @@ set(GLM_INCLUDE_DIR "$ENV{GLM_INCLUDE_DIR}")
 if(NOT GLM_INCLUDE_DIR)
   MESSAGE(FATAL_ERROR "Please point the environment variable GLM_INCLUDE_DIR to the include directory of your GLM installation.")
 endif()
-include_directories(${GLM_INCLUDE_DIR})
+
 
 # Get the GLFW environment variable. There should be a CMakeLists.txt in the 
 # specified directory.
@@ -49,31 +33,78 @@ if(CMAKE_BUILD_TYPE MATCHES Release)
 else()
   add_subdirectory(${GLFW_DIR} ${GLFW_DIR}/debug)
 endif()
-include_directories(${GLFW_DIR}/include)
-target_link_libraries(${CMAKE_PROJECT_NAME} glfw ${GLFW_LIBRARIES})
 
-# Get the GLEW environment variable.
-include_directories(${GLEW_DIR}/include)
-if(WIN32)
-  target_link_libraries(${CMAKE_PROJECT_NAME} ${GLEW_DIR}/lib/Release/Win32/glew32s.lib)
-else()
-  target_link_libraries(${CMAKE_PROJECT_NAME} ${GLEW_DIR}/lib/libGLEW.a)
-endif()
 
-# OS specific options and libraries
-if(WIN32)
-  # c++0x is enabled by default.
-  # -Wall produces way too many warnings.
-  # -pedantic is not supported.
-  target_link_libraries(${CMAKE_PROJECT_NAME} opengl32.lib)
-else()
-  # Enable all pedantic warnings.
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x -Wall -pedantic")
-  if(APPLE)
-    # Add required frameworks for GLFW.
-    target_link_libraries(${CMAKE_PROJECT_NAME} "-framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo")
-  else()
-    #Link the Linux OpenGL library
-    target_link_libraries(${CMAKE_PROJECT_NAME} "GL")
+
+# Stolen from Ian Dunn
+function(BuildProperties TargetName)
+  if(WIN32)
+    # With prebuilt binaries
+    link_directories(${GLEW_DIR}/lib/Release/Win32)
   endif()
-endif()
+
+  include_directories(${GLM_INCLUDE_DIR})
+
+  include_directories(${GLFW_DIR}/include)
+  target_link_libraries(${TargetName} glfw ${GLFW_LIBRARIES})
+
+  # Get the GLEW environment variable.
+  include_directories(${GLEW_DIR}/include)
+  if(WIN32)
+    target_link_libraries(${TargetName} ${GLEW_DIR}/lib/Release/Win32/glew32s.lib)
+  else()
+    target_link_libraries(${TargetName} ${GLEW_DIR}/lib/libGLEW.a)
+  endif()
+
+  # OS specific options and libraries
+  if(WIN32)
+    # c++0x is enabled by default.
+    # -Wall produces way too many warnings.
+    # -pedantic is not supported.
+    target_link_libraries(${TargetName} opengl32.lib)
+  else()
+    # Enable all pedantic warnings.
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x -Wall -pedantic")
+    if(APPLE)
+      # Add required frameworks for GLFW.
+      target_link_libraries(${TargetName} "-framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo")
+    else()
+      #Link the Linux OpenGL library
+      target_link_libraries(${TargetName} "GL")
+    endif()
+  endif()
+
+  # Include header only Json library
+  target_include_directories(${TargetName} PUBLIC "${PROJECT_SOURCE_DIR}/libs/JSON/")
+
+  target_include_directories(${TargetName} PUBLIC "${PROJECT_SOURCE_DIR}/src/utility/")
+
+endfunction(BuildProperties)
+
+
+
+# HERE begins the actual main CMake setup
+
+add_subdirectory("src/utility")
+
+file(GLOB SOURCES "src/*.cpp")
+
+# We don't really need to include header and resource files to build, but it's
+# nice to have them show up in IDEs.
+file(GLOB_RECURSE HEADERS "src/*.h" "src/*.hpp")
+file(GLOB_RECURSE GLSL "shaders/*.vs" "shaders/*.fs" "shaders/*.gs" "shaders/*.cs")
+
+add_executable(${CMAKE_PROJECT_NAME} ${SOURCES} ${HEADERS} ${GLSL})
+
+# Sets the APPTYPE constant so that the executable will compile. See core.h for context
+target_compile_definitions(${CMAKE_PROJECT_NAME} PUBLIC APPTYPE=ApplicationType::GAME)
+
+BuildProperties(${CMAKE_PROJECT_NAME})
+
+target_link_libraries(${CMAKE_PROJECT_NAME} utilityTarget)
+
+#Custom build command to put all shaders into a single JSON file.
+set(SHADERPACKAGE "shaders/shaders.json") 
+add_custom_command(OUTPUT ${SHADERPACKAGE} COMMAND python3 jsify_shaders.py shaders/ -o ${SHADERPACKAGE} WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} DEPENDS ${GLSL})
+add_custom_target(Shader_Pack DEPENDS ${SHADERPACKAGE})
+add_dependencies(${CMAKE_PROJECT_NAME} Shader_Pack)

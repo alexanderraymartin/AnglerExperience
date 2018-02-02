@@ -2,6 +2,7 @@
 //    Many useful helper functions for GLSL shaders - gleaned from various sources including orange book
 //    Created by zwood on 2/21/10.
 //    Modified by sueda 10/15/15.
+//    Modified by kjyager 11/20/17
 //
 
 #pragma once
@@ -35,11 +36,15 @@ namespace GLSL {
 	void checkVersion();
 	int textFileWrite(const char *filename, char *s);
 	char *textFileRead(const char *filename);
+	char *textFileRead(FILE* file);
 	GLint getAttribLocation(const GLuint program, const char varname[], bool verbose = true);
 	GLint getUniformLocation(const GLuint program, const char varname[], bool verbose = true);
 	void enableVertexAttribArray(const GLint handle);
 	void disableVertexAttribArray(const GLint handle);
 	void vertexAttribPointer(const GLint handle, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const GLvoid *pointer);
+
+	bool compileAndCheck(GLuint shader, bool verbose);
+	bool linkAndCheck(GLuint program, bool verbose);
 }
 
 #endif

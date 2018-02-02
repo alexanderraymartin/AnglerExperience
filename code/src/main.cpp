@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <iostream>
+#define _USE_MATH_DEFINES
 #include <cmath>
 
 #define GLEW_STATIC
@@ -17,9 +18,12 @@
 #define GLEE_OVERWRITE_GL_FUNCTIONS
 #include "utility/glee.h"
 
+// This isn't really necessary as we will be importing implementations of these interfaces
+// but for now it's nice to make sure things compile with them there. 
+#include "Component.hpp"
+#include "Entity.hpp"
 
 using namespace std;
-
 
 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -44,12 +48,7 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 
 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-        //    __  __       _          __   __    :
-        //   |  \/  | __ _(_)_ __    / /   \ \   :
-        //   | |\/| |/ _` | | '_ \  | |     | |  :
-        //   | |  | | (_| | | | | | | |_ _ _| |  :
-        //   |_|  |_|\__,_|_|_| |_| | (_|_|_) |  :
-        //                           \_\   /_/   :
+        // Main()
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 int main(int argc, char** argv){
@@ -89,10 +88,19 @@ int main(int argc, char** argv){
     // TODO: RenderSystem::render(appstate, gstate, elapsedTime);
 
     // Temporary block for very early development. 
+
     {
       int width, height;
       glfwGetFramebufferSize(appstate.window, &width, &height);
       glViewport(0, 0, width, height);
+      
+      // Added this so it isn't just black screen. 
+      glClearColor(
+        0.0, 
+        fabs(sinf(gstate.fxAnimTime.getTime())),
+        fabs(sinf(gstate.fxAnimTime.getTime()+M_PI_2)),
+        1.0
+      );
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     }
 
@@ -113,12 +121,7 @@ int main(int argc, char** argv){
 }
 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-        //    _____ _   _ ____    __  __       _          __   __    :
-        //   | ____| \ | |  _ \  |  \/  | __ _(_)_ __    / /   \ \   :
-        //   |  _| |  \| | | | | | |\/| |/ _` | | '_ \  | |     | |  :
-        //   | |___| |\  | |_| | | |  | | (_| | | | | | | |_ _ _| |  :
-        //   |_____|_| \_|____/  |_|  |_|\__,_|_|_| |_| | (_|_|_) |  :
-        //                                               \_\   /_/   :
+        // END Main()
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 
@@ -195,6 +198,8 @@ static void initGLFW(ApplicationState &appstate){
 }
 
 static void initShaders(const ApplicationState &appstate, TopLevelResources &resources){
+  resources.shaderlib.init();
+
   // TODO: Iterate through given shader source files, compile them, and store the in the shaderlib.
   // Note: To prevent this from being ungodly long due to the nature of Zoe's Program class we should 
   // probably set up some kind of alternative for adding all the uniforms and attributes. JSON loader? 

@@ -1,15 +1,20 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <sstream>
 #include "ShaderLibrary.hpp"
 #include "Program.h"
 #include "common.h"
 
 using namespace std;
 
-ShaderLibrary::ShaderLibrary(){
-  // TODO: Initialize fallback with hardcoded glsl so it is never absent
-  // Note: Program.h must be updated before this can happen.
-  active = NULL; // <--- This is very bad and should be fixed asap
+void ShaderLibrary::init(){
+  istringstream evs(errorvs);
+  istringstream efs(errorfs);
+
+  if(!fallback.buildVsFsProgram(&evs,&efs)){
+    exit(1212);
+  }
+  active = &fallback;
 }
 
 void ShaderLibrary::add(const string &name, Program* prog){

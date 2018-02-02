@@ -2,41 +2,77 @@
 #ifndef __Program__
 #define __Program__
 
-#include <map>
+#include <unordered_map>
+#include <istream>
 #include <string>
+#include <json.hpp>
 
 #define GLEW_STATIC
 #include <GL/glew.h>
 
+using namespace std;
+using json = nlohmann::json;
+
 class Program{
 public:
-	Program();
-	virtual ~Program();
-	
-	void setVerbose(bool v) { verbose = v; }
-	bool isVerbose() const { return verbose; }
+  // Creates empty program object
+  Program();
 
-	GLuint getPID() const { return(pid); }
-	
-	void setShaderNames(const std::string &v, const std::string &f);
-	virtual bool init();
-	virtual void bind();
-	virtual void unbind();
+  // Same as calling builFromJSONArray
+  Program(const json &program_obj);
 
-	void addAttribute(const std::string &name);
-	void addUniform(const std::string &name);
-	GLint getAttribute(const std::string &name) const;
-	GLint getUniform(const std::string &name) const;
-	
-protected:
-	std::string vShaderName;
-	std::string fShaderName;
-	
+  Program(istream *vertex, istream *fragment);
+  
+  virtual ~Program();
+  
+  void setVerbose(bool v) { verbose = v; }
+  bool isVerbose() const { return verbose; }
+
+  GLuint getPID() const { return(pid); }
+
+
+  // Note: istream is used as the interface here so that the functions can be more flexible. 
+  // To load from a file an ifstream can be given. To load a string use istringstream, ect...
+  
+  // Build the classic vertex shader -> fragment shader program from two GLSL sources
+  // Returns true if program compiled and linked properly false otherwise
+  bool buildVsFsProgram(istream *vertex, istream *fragment);
+
+  // Build from a JSON array containing shader specifications. Program will be linked in order given. 
+  // Structure should be as follows
+  /* 
+  [
+    {
+      "name":"shaderName"
+      "type": "vertex | fragment | geometry | compute"
+      "attributes": [["float", "list"], ["vec2", "of"], ["mat4", "attributes"]]
+      "uniforms": [["sampler2D", "list"], ["int", "of"], ["vec3", "uniforms"]]
+      "src": "#version 330 core\n // Long line of the GLSL code"
+    },
+
+    {
+      "name":"otherShaderName"
+      "type": "vertex | fragment | geometry | compute"
+      "attributes": [["float", "list"], ["vec2", "of"], ["mat4", "attributes"]]
+      "uniforms": [["sampler2D", "list"], ["int", "of"], ["vec3", "uniforms"]]
+      "src": "#version 330 core\n // Long line of the GLSL code"
+    }
+  ]
+  */
+  // Returns true if program compiled and linked properly false otherwise
+  bool buildFromJsonArray(const json &program_obj);
+  
+  virtual void bind();
+  virtual void unbind();
+
+  GLint getAttribute(const string &name);
+  GLint getUniform(const string &name);
+  
 private:
-	GLuint pid;
-	std::map<std::string,GLint> attributes;
-	std::map<std::string,GLint> uniforms;
-	bool verbose;
+  GLuint pid;
+  unordered_map<string,GLint> attributes;
+  unordered_map<string,GLint> uniforms;
+  bool verbose;
 };
 
 #endif

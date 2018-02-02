@@ -126,8 +126,27 @@ char *textFileRead(const char *fn)
 			}
 			fclose(fp);
 		} else {
-			printf("error loading %s\n", fn);
+			fprintf(stderr, "error loading %s\n", fn);
 		}
+	}
+	return content;
+}
+
+char* textFileRead(FILE* file){
+	char *content = NULL;
+	int count = 0;
+	if(file != NULL) {
+		fseek(file, 0, SEEK_END);
+		count = (int)ftell(file);
+		rewind(file);
+		if(count > 0) {
+			content = (char *)malloc(sizeof(char) * (count+1));
+			count = (int)fread(content,sizeof(char),count,file);
+			content[count] = '\0';
+		}
+		fclose(file);
+	} else {
+		fprintf(stderr, "error loading from file pointer! \n");
 	}
 	return content;
 }
@@ -186,6 +205,35 @@ void vertexAttribPointer(const GLint handle, GLint size, GLenum type, GLboolean 
 	if(handle >= 0) {
 		glVertexAttribPointer(handle, size, type, normalized, stride, pointer);
 	}
+}
+
+bool compileAndCheck(GLuint shader, bool verbose){
+	GLint rc;
+
+	glCompileShader(shader);
+	glGetShaderiv(shader, GL_COMPILE_STATUS, &rc);
+	if(!rc) {
+		if(verbose) {
+			GLSL::printShaderInfoLog(shader);
+		}
+		return(false);
+	}
+	return(true);
+}
+
+bool linkAndCheck(GLuint program, bool verbose){
+	GLint rc;
+
+	glLinkProgram(program);
+	glGetProgramiv(program, GL_LINK_STATUS, &rc);
+	if(!rc) {
+		if(verbose) {
+			GLSL::printProgramInfoLog(program);
+			std::cerr << "Error linking shaders " << std::endl;
+		}
+		return(false);
+	}
+	return(true);
 }
 
 }

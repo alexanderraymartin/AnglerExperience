@@ -42,7 +42,7 @@ struct ApplicationState{
 };
 
 struct TopLevelResources{
-  ShaderLibrary shaders;
+  ShaderLibrary shaderlib;
   // FontLibrary fonts;
   // Library/SDK instances 
 };
