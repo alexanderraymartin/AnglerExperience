@@ -9,33 +9,6 @@ import argparse
 import json
 import re
 
-# This used to be longer
-EXPORT_HEADER = '{'
-
-VS_TEMPLATE = '''
-	{name}: {{
-
-		"attributes": {attributes},
-
-		"uniforms": {uniforms},
-
-		"varying": {varying},
-
-		"src": {src}
-	}},
-'''
-
-FS_TEMPLATE = '''
-	{name}: {{
-
-		"uniforms": {uniforms},
-
-		"varying": {varying},
-
-		"src": {src}
-	}},
-'''
-
 def main():
 	args = parse_args()
 	for path in args.srcpaths:
