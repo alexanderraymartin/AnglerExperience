@@ -27,7 +27,7 @@ class Entity{
   virtual const vector<Entity*>& getChildren(){return(children);}
   virtual const vector<Component*>& getComponents(){return(components);}
 
-  Entity* scene; // Pointer to the scene to which this entity belongs. 
+  bool isActive = true;
 
  protected:
   vector<Entity*> children;

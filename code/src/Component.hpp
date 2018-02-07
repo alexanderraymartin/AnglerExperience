@@ -28,7 +28,7 @@ class Component{
   virtual ~Component() = 0;
 
   // A switch to enable/disable the component.
-  bool isActive;
+  bool isActive = true;
   
   // See definition of ComponentType at top of file
   static const ComponentType component_type = ComponentType::NONE;

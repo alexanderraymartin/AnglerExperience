@@ -10,7 +10,7 @@
 
 #include <GLFW/glfw3.h>
 
-#include "utility/common.h"
+#include <common.h>
 #include "core.h"
 #include "GameState.hpp"
 
@@ -23,6 +23,8 @@
 #include "Component.hpp"
 #include "Entity.hpp"
 
+#include "RenderSystem.hpp"
+
 using namespace std;
 
 
@@ -33,7 +35,7 @@ using namespace std;
 static void initGL();
 static void initLibs(TopLevelResources &resources);
 static void initGLFW(ApplicationState &appstate);
-static void initShaders(const ApplicationState &appstate, TopLevelResources &resources);
+static void initShaders(ApplicationState &appstate);
 static void initPrimitives(TopLevelResources &resources);
 
 static GLFWmonitor* autoDetectScreen(UINT* width, UINT* height);
@@ -53,19 +55,20 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 
 int main(int argc, char** argv){
   ApplicationState appstate; 
-  TopLevelResources resources;
   GameState gstate(glfwGetTime); // glfwGetTime used as source of time. It can be replaced.
 
   srand(time(NULL));
   initGLFW(appstate);
-  initLibs(resources); // Can be split up in needed
+  initLibs(appstate.resources); // Can be split up in needed
   initGL();
-  initShaders(appstate, resources);
-  initPrimitives(resources);
+  initShaders(appstate);
+  initPrimitives(appstate.resources);
 
   // TODO: initScene(appstate, resources, gstate);
-  // TODO (maybe): initSystems(appstate, resources, gstate);
 
+  RenderSystem::init(appstate);
+
+  gstate.gameTime.reset();
   while(!glfwWindowShouldClose(appstate.window)){
 
     // TODO: Appropriate timestep loop structure
@@ -85,24 +88,7 @@ int main(int argc, char** argv){
     // try and keep all that linked together inside of the single RenderSystem for simplicity and
     // so that not buffers or other data has to be shared between calls here in main(). 
 
-    // TODO: RenderSystem::render(appstate, gstate, elapsedTime);
-
-    // Temporary block for very early development. 
-
-    {
-      int width, height;
-      glfwGetFramebufferSize(appstate.window, &width, &height);
-      glViewport(0, 0, width, height);
-      
-      // Added this so it isn't just black screen. 
-      glClearColor(
-        0.0, 
-        fabs(sinf(gstate.fxAnimTime.getTime())),
-        fabs(sinf(gstate.fxAnimTime.getTime()+M_PI_2)),
-        1.0
-      );
-      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    }
+    RenderSystem::render(appstate, gstate, gstate.gameTime.elapsed());
 
     glfwSwapBuffers(appstate.window);
     glfwPollEvents();
@@ -154,10 +140,10 @@ static void initLibs(TopLevelResources &resources){
   // ...?
 }
 
+// This is verbose and ugly. Maybe we should move it.
 static void initGLFW(ApplicationState &appstate){
   // Lambda functions for simple callbacks
   auto error_callback = [](int error, const char* description){cerr << description << endl;};
-  auto resize_callback = [](GLFWwindow *window, int width, int height){glViewport(0, 0, width, height);};
 
   glfwSetErrorCallback(error_callback);
 
@@ -193,12 +179,12 @@ static void initGLFW(ApplicationState &appstate){
 
   glfwSwapInterval(1);
   // glfwSetInputMode(appstate.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-  glfwSetFramebufferSizeCallback(appstate.window, resize_callback);
+  glfwSetFramebufferSizeCallback(appstate.window, RenderSystem::onResize);
   glfwSetKeyCallback(appstate.window, key_callback);
 }
 
-static void initShaders(const ApplicationState &appstate, TopLevelResources &resources){
-  resources.shaderlib.init();
+static void initShaders(ApplicationState &appstate){
+  appstate.resources.shaderlib.init();
 
   // TODO: Iterate through given shader source files, compile them, and store the in the shaderlib.
   // Note: To prevent this from being ungodly long due to the nature of Zoe's Program class we should 
