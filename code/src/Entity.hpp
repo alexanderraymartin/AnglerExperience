@@ -13,9 +13,6 @@ using namespace std;
 class Entity{
   friend class System;
  public:
-  Entity();
-  virtual ~Entity() = 0;
-
   // Intended to be overridden by scene to enable use of a contiguous set of children. 
   virtual void addChildClone(const Entity& entity) = 0;
 

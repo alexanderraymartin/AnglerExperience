@@ -24,9 +24,6 @@ enum class ComponentType{
 
 class Component{
  public:
-  Component();
-  virtual ~Component() = 0;
-
   // A switch to enable/disable the component.
   bool isActive = true;
   

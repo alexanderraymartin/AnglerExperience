@@ -43,13 +43,14 @@ function(BuildProperties TargetName)
     link_directories(${GLEW_DIR}/lib/Release/Win32)
   endif()
 
-  include_directories(${GLM_INCLUDE_DIR})
+  target_include_directories(${TargetName} PUBLIC ${GLM_INCLUDE_DIR})
 
-  include_directories(${GLFW_DIR}/include)
+  target_include_directories(${TargetName} PUBLIC ${GLFW_DIR}/include)
+
   target_link_libraries(${TargetName} glfw ${GLFW_LIBRARIES})
 
   # Get the GLEW environment variable.
-  include_directories(${GLEW_DIR}/include)
+  target_include_directories(${TargetName} PUBLIC  ${GLEW_DIR}/include)
   if(WIN32)
     target_link_libraries(${TargetName} ${GLEW_DIR}/lib/Release/Win32/glew32s.lib)
   else()
@@ -87,7 +88,9 @@ endfunction(BuildProperties)
 
 add_subdirectory("src/utility")
 
-file(GLOB SOURCES "src/*.cpp")
+add_subdirectory("libs/TinyObj")
+
+file(GLOB SOURCES "src/*.cpp" "src/components/*.cpp")
 
 # We don't really need to include header and resource files to build, but it's
 # nice to have them show up in IDEs.
@@ -96,12 +99,18 @@ file(GLOB_RECURSE GLSL "shaders/*.vs" "shaders/*.fs" "shaders/*.gs" "shaders/*.c
 
 add_executable(${CMAKE_PROJECT_NAME} ${SOURCES} ${HEADERS} ${GLSL})
 
+include_directories("${PROJECT_SOURCE_DIR}/src/components")
+
 # Sets the APPTYPE constant so that the executable will compile. See core.h for context
 target_compile_definitions(${CMAKE_PROJECT_NAME} PUBLIC APPTYPE=ApplicationType::GAME)
 
 BuildProperties(${CMAKE_PROJECT_NAME})
 
 target_link_libraries(${CMAKE_PROJECT_NAME} utilityTarget)
+
+target_link_libraries(${CMAKE_PROJECT_NAME} tinyObjTarget)
+
+include_directories("${PROJECT_SOURCE_DIR}/libs/TinyObj")
 
 #Custom build command to put all shaders into a single JSON file.
 set(SHADERPACKAGE "shaders/shaders.json") 
