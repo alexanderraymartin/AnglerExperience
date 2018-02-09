@@ -10,6 +10,9 @@
 
 #include <GLFW/glfw3.h>
 
+#define APPSTATE ApplicationState
+#define TLRES TopLevelResources
+
 using namespace std;
 
 // Application type should be set to differentiate between internally between an instance of the 
@@ -49,5 +52,7 @@ struct ApplicationState{
   TopLevelResources resources;
   
 };
+
+
 
 #endif

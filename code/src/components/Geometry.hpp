@@ -27,7 +27,6 @@ public:
   void adjust(glm::vec3 offset, float scale);
 
   static void loadFullObj(const char* objname, vector<Geometry> &geometrysequence);
-
   // void draw(const std::shared_ptr<Program> shader) const;
 
   glm::vec3 min;

@@ -14,6 +14,8 @@ void ShaderLibrary::init(){
   if(!fallback.buildVsFsProgram(&evs,&efs)){
     exit(1212);
   }
+  fallback.setVerbose(false);
+  fallback.bind();
   active = &fallback;
 }
 
@@ -47,7 +49,7 @@ void ShaderLibrary::fastActivate(Program* prog){
   }
 }
 
-const Program& ShaderLibrary::getActive(){
+Program& ShaderLibrary::getActive(){
 
   if(active == &fallback){
     fprintf(stderr,"Warning! Returning error shader from ShaderLibrary.getActive()!\n");

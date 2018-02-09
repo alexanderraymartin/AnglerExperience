@@ -50,8 +50,8 @@ T Timeline<T>::elapsed(){
   if(paused){
     return(0.0);
   }else{
-    T tmp = (timeSource()-start + pausetime)-lastTime;
-    lastTime = tmp;
+    T tmp = (timeSource() - start + pausetime)-lastTime;
+    lastTime = timeSource();
     return(tmp);
   }
 }

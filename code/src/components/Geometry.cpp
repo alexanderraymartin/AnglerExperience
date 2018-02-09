@@ -149,7 +149,7 @@ void Geometry::init()
   assert(glGetError() == GL_NO_ERROR);
 }
 
-static void loadFullObj(const char* objname, vector<Geometry> &geometrysequence){
+void Geometry::loadFullObj(const char* objname, vector<Geometry> &geometrysequence){
   vector<tinyobj::shape_t> TOshapes;
   vector<tinyobj::material_t> objMaterials;
   string errStr;

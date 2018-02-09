@@ -17,13 +17,17 @@ using namespace std;
 
 class Scene{
  public:
+  Scene() : entities(), killqueue() {}
+  Scene(Component* camera) : camera(camera){}
+  ~Scene(){}
 
-  Scene();
-  virtual ~Scene();
+  void addEntity(Entity* entity){entities[entity] = entity;}
 
   void submitToKill(Entity* entity);
 
   void clearKillQ();
+
+  Component* camera = NULL;
 
   // Unorderded map probably has some overhead compared to vector when it comes to iterating over 
   // the elements, but it should still be the same time complexity if we are always iterating on

@@ -9,6 +9,7 @@
 #include "utility/GLSL.h"
 
 #include <GLFW/glfw3.h>
+#include <glm/glm.hpp>
 
 #include <common.h>
 #include "core.h"
@@ -23,7 +24,12 @@
 #include "Component.hpp"
 #include "Entity.hpp"
 
+#include "components/Geometry.hpp"
+#include "SimpleComponents.hpp"
+#include "AnimationComponents.hpp"
+
 #include "RenderSystem.hpp"
+#include "AnimationSystem.hpp"
 
 using namespace std;
 
@@ -37,6 +43,7 @@ static void initLibs(TopLevelResources &resources);
 static void initGLFW(ApplicationState &appstate);
 static void initShaders(ApplicationState &appstate);
 static void initPrimitives(TopLevelResources &resources);
+static void initScene(ApplicationState &appstate, GameState &gstate);
 
 static GLFWmonitor* autoDetectScreen(UINT* width, UINT* height);
 static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
@@ -64,13 +71,14 @@ int main(int argc, char** argv){
   initShaders(appstate);
   initPrimitives(appstate.resources);
 
-  // TODO: initScene(appstate, resources, gstate);
+  initScene(appstate, gstate);
 
   RenderSystem::init(appstate);
 
   gstate.gameTime.reset();
   while(!glfwWindowShouldClose(appstate.window)){
 
+    double fxAnimTime = gstate.fxAnimTime.elapsed();
     // TODO: Appropriate timestep loop structure
     {
       // TODO: PlayerSystem::update(appstate, gstate, elapsedTime);
@@ -79,7 +87,7 @@ int main(int argc, char** argv){
       // TODO: PhysicsSystem::update(appstate, gstate, elapsedTime);
       // TODO: ParticleSystem::update(appstate, gstate, elapsedTime); // Particle System System*
       // TODO: GameplaySystem::update(appstate, gstate, elapsedTime);
-      // TODO: AnimationSystem::update(appstate, gstate, elapsedTime);
+      AnimationSystem::update(appstate, gstate, fxAnimTime);
     }
 
     // Rendering happens here. This 'RenderSystem' will end up containing a lot and effectively
@@ -88,7 +96,7 @@ int main(int argc, char** argv){
     // try and keep all that linked together inside of the single RenderSystem for simplicity and
     // so that not buffers or other data has to be shared between calls here in main(). 
 
-    RenderSystem::render(appstate, gstate, gstate.gameTime.elapsed());
+    RenderSystem::render(appstate, gstate, fxAnimTime);
 
     glfwSwapBuffers(appstate.window);
     glfwPollEvents();
@@ -192,6 +200,21 @@ static void initShaders(ApplicationState &appstate){
 }
 static void initPrimitives(TopLevelResources &resources){
   // TODO: Load some primitive geometry into appropriate OpenGL buffers. (quads, tris, cube, sphere, ect...)
+}
+
+static void initScene(ApplicationState &appstate, GameState &gstate){
+  StaticCamera* scenecam = new StaticCamera(45.0, glm::vec3(0.0), glm::vec3(0.0, 0.0, 3.0));
+  gstate.activeScene = new Scene(scenecam);
+
+  Entity *cube = new Entity();
+  
+  vector<Geometry> cubegeo;
+  Geometry::loadFullObj("../gameassets/cube.obj", cubegeo);
+
+  cube->attach(new SolidMesh(cubegeo));
+  cube->attach(new Pose(glm::vec3(0.0, 0.0, 6.0)));
+  cube->attach(new LinearRotationAnim(glm::vec3(0.0,1.0,0.0), 10.0/(2.0*M_PI)));
+  gstate.activeScene->addEntity(cube);
 }
 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=

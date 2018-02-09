@@ -8,6 +8,9 @@
 #define GLEW_STATIC
 #include <GL/glew.h>
 
+#include <glm/glm.hpp>
+#include <MatrixStack.h>
+
 #include "core.h"
 #include "GameState.hpp"
 #include "Scene.hpp"
@@ -21,6 +24,14 @@ namespace RenderSystem{
 
 	// Any data structures used inbetween renders should also be stored here as static
 	static GLuint FBOpair[2]; 
+
+	struct MVPset{
+		MatrixStack M;
+		MatrixStack V;
+		MatrixStack P;
+	};
+
+	static MVPset MVP;
 
 	void init(ApplicationState &appstate);
 

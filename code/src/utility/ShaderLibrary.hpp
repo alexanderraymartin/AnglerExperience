@@ -33,7 +33,7 @@ friend class Material;
   // library during rendering that skip the overhead of the hash-table whilst avoiding redundant bind calls.
   void fastActivate(Program* prog);
 
-  const Program& getActive();
+  Program& getActive();
 
   // TODO: void create(string name, ProgramType type, <collection> sources, <collection> uniforms, <collection> attributes);
   // Note: Program.h needs and update first so that it supports more general GLSL programs other than vs->fs

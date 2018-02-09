@@ -23,8 +23,8 @@ class MatrixStack {
   std::shared_ptr< std::stack<mat4> > mstack;
 
 public:
-
-  MatrixStack();   
+  MatrixStack();
+  MatrixStack(const mat4 &matrix);
   virtual ~MatrixStack();
 
   // Copies the current matrix and adds it to the top of the stack
