@@ -39,7 +39,6 @@ struct TopLevelResources{
 // very core c++ application, and not anything directly tied to gameplay or assets
 struct ApplicationState{
   GLFWwindow* window;
-  const char* resource_dir = "./gameassets/";
   ApplicationType apptype = APPTYPE;
 
   bool firstRun = true; // In case of edge cases where special ops need to be done on first loop;n

@@ -103,6 +103,7 @@ include_directories("${PROJECT_SOURCE_DIR}/src/components")
 
 # Sets the APPTYPE constant so that the executable will compile. See core.h for context
 target_compile_definitions(${CMAKE_PROJECT_NAME} PUBLIC APPTYPE=ApplicationType::GAME)
+add_definitions("-DASSET_DIR=${CMAKE_SOURCE_DIR}/gameassets" "-DSHADER_DIR=${CMAKE_SOURCE_DIR}/shaders")
 
 BuildProperties(${CMAKE_PROJECT_NAME})
 
@@ -114,6 +115,6 @@ include_directories("${PROJECT_SOURCE_DIR}/libs/TinyObj")
 
 #Custom build command to put all shaders into a single JSON file.
 set(SHADERPACKAGE "shaders/shaders.json") 
-add_custom_command(OUTPUT ${SHADERPACKAGE} COMMAND python3 jsify_shaders.py shaders/ -o ${SHADERPACKAGE} WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} DEPENDS ${GLSL})
+add_custom_command(OUTPUT ${SHADERPACKAGE} COMMAND python jsify_shaders.py shaders/ -o ${SHADERPACKAGE} WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} DEPENDS ${GLSL})
 add_custom_target(Shader_Pack DEPENDS ${SHADERPACKAGE})
 add_dependencies(${CMAKE_PROJECT_NAME} Shader_Pack)

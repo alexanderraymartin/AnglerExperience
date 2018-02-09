@@ -58,6 +58,18 @@ void RenderSystem::render(ApplicationState &appstate, GameState &gstate, double 
   MVP.M.loadIdentity();
   MVP.V = MatrixStack(updateView(gstate.activeScene->camera));
 
+  // This is a quick hack, will be removed once a materials infrastructure is in place
+  {
+    appstate.resources.shaderlib.makeActive("blinn-phong");
+    Program &prog = appstate.resources.shaderlib.getActive();
+    glUniform3f(prog.getUniform("sunDir"), 0.5, -1.0, 1.0);
+    glUniform3f(prog.getUniform("sunCol"), .7, .7, .65);
+    glUniform3f(prog.getUniform("matAmb"), .1, .1, .1);
+    glUniform3f(prog.getUniform("matDif"), .7, .7, .7);
+    glUniform3f(prog.getUniform("matSpec"), .4, .4, .4);
+    glUniform1f(prog.getUniform("shine"), 9.0);
+  }
+
   computeLighting();
   drawBackground();
   drawAngler();

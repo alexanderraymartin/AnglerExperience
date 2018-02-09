@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <iostream>
+#include <fstream>
 #define _USE_MATH_DEFINES
 #include <cmath>
 
@@ -10,6 +11,8 @@
 
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
+
+#include <json.hpp>
 
 #include <common.h>
 #include "core.h"
@@ -194,6 +197,17 @@ static void initGLFW(ApplicationState &appstate){
 static void initShaders(ApplicationState &appstate){
   appstate.resources.shaderlib.init();
 
+  ifstream shaderfile = ifstream("" STRIFY(SHADER_DIR) "/shaders.json");
+  if(!shaderfile.is_open()){
+    fprintf(stderr, "Failed to open shaders json file!\n");
+    exit(3);
+  }
+  json shaderjson;
+  shaderfile >> shaderjson;
+  for(json &j : shaderjson["pairs"]){
+    appstate.resources.shaderlib.add(j[0]["basename"].get<string>(), new Program(j));
+  }
+
   // TODO: Iterate through given shader source files, compile them, and store the in the shaderlib.
   // Note: To prevent this from being ungodly long due to the nature of Zoe's Program class we should 
   // probably set up some kind of alternative for adding all the uniforms and attributes. JSON loader? 
@@ -209,11 +223,11 @@ static void initScene(ApplicationState &appstate, GameState &gstate){
   Entity *cube = new Entity();
   
   vector<Geometry> cubegeo;
-  Geometry::loadFullObj("../gameassets/cube.obj", cubegeo);
+  Geometry::loadFullObj( "" STRIFY(ASSET_DIR) "/cube.obj", cubegeo);
 
   cube->attach(new SolidMesh(cubegeo));
   cube->attach(new Pose(glm::vec3(0.0, 0.0, 6.0)));
-  cube->attach(new LinearRotationAnim(glm::vec3(0.0,1.0,0.0), 10.0/(2.0*M_PI)));
+  cube->attach(new LinearRotationAnim(glm::vec3(0.0,1.0,0.0), .75));
   gstate.activeScene->addEntity(cube);
 }
 

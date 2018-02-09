@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+from __future__ import print_function
 import os
 pathutils = os.path
 import sys
@@ -42,15 +43,21 @@ def gather_shaders(path):
 	return((vslist,fslist))
 
 def export_json(vslist, fslist, opath):
-	contents = []
+	pairs = {}
+	for vs in vslist:
+		for fs in fslist:
+			if(vs.basename == fs.basename):
+				pairs[vs.basename] = (vs.__dict__,fs.__dict__)
+
+	floating = {}
 
 	for vs in vslist:
-		contents.append(vs.__dict__);
+		floating[vs.name] = vs.__dict__
 	for fs in fslist:
-		contents.append(fs.__dict__);
+		floating[fs.name] = fs.__dict__
 
 	ofile = open(opath,'w')
-	ofile.write(json.dumps(contents, indent=2))
+	ofile.write(json.dumps({"pairs": pairs, "all": floating}, indent=2))
 	ofile.close() 
 
 def parse_args():
@@ -81,6 +88,7 @@ class VertexShader():
 		self.src = ''.join(self.lines)
 		self.lines = len(self.lines)
 		self.name, self.ext = pathutils.splitext(path)
+		self.basename = pathutils.basename(self.name)
 		self.name = "vert_{0}".format(pathutils.basename(self.name))
 
 class FragmentShader():
@@ -101,6 +109,7 @@ class FragmentShader():
 		self.src = ''.join(self.lines)
 		self.lines = len(self.lines)
 		self.name, self.ext = pathutils.splitext(path)
+		self.basename = pathutils.basename(self.name)
 		self.name = "frag_{0}".format(pathutils.basename(self.name))
 
 if __name__ == "__main__":

@@ -93,7 +93,7 @@ bool Program::buildVsFsProgram(istream *vertex, istream *fragment){
 }
 
 // Used to select shader type from json
-static map<const char*, GLenum> typemap = {
+static map<string, GLenum> typemap = {
   {"vertex", GL_VERTEX_SHADER},
   {"fragment", GL_FRAGMENT_SHADER},
   {"geometry", GL_GEOMETRY_SHADER},
@@ -106,24 +106,30 @@ bool Program::buildFromJsonArray(const json &program_obj){
 
   // Iterate through JSON array and compile each individual component shader
   for(auto &j : program_obj){
-    GLuint cshad = glCreateShader(typemap[j["type"].get<string>().c_str()]);
-    const char* srcptr = j["src"].get<string>().c_str();
+    GLuint cshad = glCreateShader(typemap[j["type"].get<string>()]);
+    string src = j["src"].get<string>().c_str();
+    const char* srcptr = src.c_str();
     glShaderSource(cshad, 1, &srcptr, NULL);
     if(!GLSL::compileAndCheck(cshad, verbose)){
-      cerr << "Compiling shader " << j["name"] << " in JSON array failed!\n";
+      cerr << "Compiling shader " << j["basename"].get<string>() << " in JSON array failed!\n";
       return(false);
     }
 
     // Add attributes and uniforms to vector 
-    for(auto &attr : j["attributes"]){
-      prog_attributes.push_back(attr[1].get<string>().c_str());
-    }
-    for(auto &unif : j["uniforms"]){
-      prog_uniforms.push_back(unif[1].get<string>().c_str());
-    }
 
+    if(j.find("attributes") != j.end()){
+      for(auto &attr : j["attributes"]){
+          prog_attributes.push_back(attr[1].get<string>().c_str());
+        }
+    }
+    if(j.find("uniforms") != j.end()){
+      for(auto &unif : j["uniforms"]){
+        prog_uniforms.push_back(unif[1].get<string>().c_str());
+      }
+    }
     component_shaders.push_back(cshad);
   }
+
 
   // Attatch all given shaders
   pid = glCreateProgram();
