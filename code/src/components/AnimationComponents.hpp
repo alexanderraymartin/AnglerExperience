@@ -51,4 +51,22 @@ class LinearRotationAnim : public AnimationComponent{
   vec3 euler;
 };
 
+class AnimatableMesh : public AnimationComponent{
+ public:
+  AnimatableMesh();
+  AnimatableMesh(vector<SolidMesh *> &copymesh){meshes = copymesh;}
+  AnimatableMesh(vector<SolidMesh *> &copymesh, double timePerKeyFrame) :
+    meshes(copymesh), timePerKeyFrame(timePerKeyFrame) { };
+  ~AnimatableMesh(){};
+
+  vector<SolidMesh *> meshes;
+  int index = 0;
+  double timePerKeyFrame = 0.1;
+  double dtLastKeyFrame = 0;
+
+  SolidMesh *getCurrentMesh() const {
+    return meshes[index];
+  }
+};
+
 #endif

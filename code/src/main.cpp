@@ -232,7 +232,7 @@ static void initScene(ApplicationState &appstate, GameState &gstate){
     meshes.push_back(new SolidMesh(minnowgeo));
   }
 
-  minnow->attach(new AnimatableMesh(meshes, 0.01));
+  minnow->attach(new AnimatableMesh(meshes, 0.066));
   minnow->attach(new Pose(glm::vec3(0.0, 0.0, 3.0), glm::angleAxis(1.5f, glm::vec3(0.0f, 1.0f, 0.0f))));
 //  minnow->attach(new LinearRotationAnim(glm::vec3(0.0,1.0,0.0), .75));
   gstate.activeScene->addEntity(minnow);

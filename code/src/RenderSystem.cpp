@@ -8,6 +8,7 @@
 
 #include "components/SimpleComponents.hpp"
 #include "components/Geometry.hpp"
+#include "components/AnimationComponents.hpp"
 
 // Disable complaints about all the placeholder functions
 #pragma GCC diagnostic push

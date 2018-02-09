@@ -39,24 +39,6 @@ class SolidMesh : public Component{
   vector<Geometry> geometries;
 };
 
-class AnimatableMesh : public Component{
- public:
-  AnimatableMesh();
-  AnimatableMesh(vector<SolidMesh *> &copymesh){meshes = copymesh;}
-  AnimatableMesh(vector<SolidMesh *> &copymesh, double timePerKeyFrame) :
-    meshes(copymesh), timePerKeyFrame(timePerKeyFrame) { };
-  ~AnimatableMesh(){};
-
-  vector<SolidMesh *> meshes;
-  int index = 0;
-  double timePerKeyFrame = 0.1;
-  double dtLastKeyFrame = 0;
-
-  SolidMesh *getCurrentMesh() const {
-    return meshes[index];
-  }
-};
-
 class Camera : public Component{
  public:
   virtual ~Camera(){};
