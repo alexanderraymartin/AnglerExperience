@@ -32,6 +32,8 @@ static void updateLinearAnimations(Entity* entity, double dt);
 
 static void runLinearAnim(Component* linear, Pose* pose, double dt);
 
+static void updateAnimatableMesh(AnimatableMesh *anim, double dt);
+
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
         // AnimationSystem functions
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -50,11 +52,22 @@ static void updateLinearAnimations(Entity* entity, double dt){
     if(dynamic_cast<AnimationComponent*>(cmpnt)){
       animcomps.emplace_back(static_cast<AnimationComponent*>(cmpnt));
     }
+    if(dynamic_cast<AnimatableMesh*>(cmpnt)){
+      updateAnimatableMesh(static_cast<AnimatableMesh*>(cmpnt), dt);
+    }
   }
   if(pose){
     for(AnimationComponent* pt : animcomps){
       runLinearAnim(pt, pose, dt);
     }
+  }
+}
+
+static void updateAnimatableMesh(AnimatableMesh *anim, double dt) {
+  anim->dtLastKeyFrame += dt;
+  if (anim->dtLastKeyFrame > anim->timePerKeyFrame) {
+    anim->index = (anim->index + 1) % anim->meshes.size();
+    anim->dtLastKeyFrame -= anim->timePerKeyFrame;
   }
 }
 

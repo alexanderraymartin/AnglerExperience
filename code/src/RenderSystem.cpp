@@ -107,9 +107,15 @@ static void drawEntities(Scene* scene, RenderSystem::MVPset &MVP, ShaderLibrary 
 static void drawEntity(const Entity* entity, RenderSystem::MVPset &MVP, ShaderLibrary &shaderlib){
   SolidMesh* mesh = NULL;
   Pose* pose = NULL;
+  AnimatableMesh* anim = NULL;
   for(Component *cmpnt : entity->components){
     mesh = dynamic_cast<SolidMesh*>(cmpnt) == NULL ? mesh : static_cast<SolidMesh*>(cmpnt);
     pose = dynamic_cast<Pose*>(cmpnt) == NULL ? pose : static_cast<Pose*>(cmpnt);
+    anim = dynamic_cast<AnimatableMesh*>(cmpnt) == NULL ? anim : static_cast<AnimatableMesh*>(cmpnt);
+
+   if (anim) {
+     mesh = anim->getCurrentMesh();
+   }
     
     if(mesh && pose){
       MVP.M.multMatrix(pose->getAffineMatrix());
