@@ -18,10 +18,6 @@
 #include "core.h"
 #include "GameState.hpp"
 
-/* to use glee */
-#define GLEE_OVERWRITE_GL_FUNCTIONS
-#include "utility/glee.h"
-
 // This isn't really necessary as we will be importing implementations of these interfaces
 // but for now it's nice to make sure things compile with them there. 
 #include "Component.hpp"
@@ -30,6 +26,8 @@
 #include "components/Geometry.hpp"
 #include "SimpleComponents.hpp"
 #include "AnimationComponents.hpp"
+#include "LightingComponents.hpp"
+#include "Material.hpp"
 
 #include "RenderSystem.hpp"
 #include "AnimationSystem.hpp"
@@ -220,15 +218,38 @@ static void initScene(ApplicationState &appstate, GameState &gstate){
   StaticCamera* scenecam = new StaticCamera(45.0, glm::vec3(0.0), glm::vec3(0.0, 0.0, 3.0));
   gstate.activeScene = new Scene(scenecam);
 
-  Entity *cube = new Entity();
-  
-  vector<Geometry> cubegeo;
-  Geometry::loadFullObj( "" STRIFY(ASSET_DIR) "/cube.obj", cubegeo);
+  Entity* light;
+  {
+    light = new Entity();
+    light->attach(new SunLight(
+      glm::vec3(.7, .7, .65),
+      glm::vec3(0.5, -1.0, 1.0))
+    );
+  }
 
-  cube->attach(new SolidMesh(cubegeo));
-  cube->attach(new Pose(glm::vec3(0.0, 0.0, 6.0)));
-  cube->attach(new LinearRotationAnim(glm::vec3(0.0,1.0,0.0), .75));
+  Entity* cube;
+  {
+    cube = new Entity();
+
+    Material mat(appstate.resources.shaderlib.getPtr("blinn-phong"));
+    mat.setVec3Prop("matAmb", glm::vec3(.1, .1, .1));
+    mat.setVec3Prop("matDif", glm::vec3(.7, .7, .75));
+    mat.setVec3Prop("matSpec", glm::vec3(.4, .4, .4));
+    mat.setFloatProp("shine", 9.0);
+
+    vector<Geometry> cubegeo;
+    Geometry::loadFullObj( "" STRIFY(ASSET_DIR) "/cube.obj", cubegeo);
+
+    SolidMesh* mesh = new SolidMesh(cubegeo);
+    mesh->setMaterial(mat);
+
+    cube->attach(mesh);
+    cube->attach(new Pose(glm::vec3(0.0, 0.0, 6.0)));
+    cube->attach(new LinearRotationAnim(glm::vec3(0.0,1.0,0.0), .75));
+  }
+
   gstate.activeScene->addEntity(cube);
+  gstate.activeScene->addEntity(light);
 }
 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=

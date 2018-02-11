@@ -2,7 +2,6 @@
 #ifndef _SIMPLECOMPONENTS_H_
 #define _SIMPLECOMPONENTS_H_
 
-#include "Geometry.hpp"
 #include <vector>
 #include <common.h>
 #include <glm/glm.hpp>
@@ -12,6 +11,8 @@
 #include <glm/gtx/quaternion.hpp>
 
 #include "../Component.hpp"
+#include "Geometry.hpp"
+#include "Material.hpp"
 
 using namespace std;
 
@@ -35,6 +36,8 @@ class SolidMesh : public Component{
   SolidMesh();
   SolidMesh(vector<Geometry> &copygeom){geometries = copygeom;}
   ~SolidMesh(){};
+
+  void setMaterial(Material &mat) {for(Geometry &geom : geometries){geom.material = mat;}}
 
   vector<Geometry> geometries;
 };

@@ -57,11 +57,11 @@ Program& ShaderLibrary::getActive(){
   return(*active);
 }
 
-const Program* ShaderLibrary::getActivePtr(){
+Program* ShaderLibrary::getActivePtr(){
   return(active);
 }
 
-const Program* ShaderLibrary::getPtr(const string& name){
+Program* ShaderLibrary::getPtr(const string& name){
   if(programs.find(name) == programs.end()){
     fprintf(stderr, "Warning! Could not fetch shader pointer!\n");
     return(NULL);

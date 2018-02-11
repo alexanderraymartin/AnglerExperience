@@ -8,6 +8,7 @@
 
 #include "components/SimpleComponents.hpp"
 #include "components/Geometry.hpp"
+#include "LightingComponents.hpp"
 
 // Disable complaints about all the placeholder functions
 #pragma GCC diagnostic push
@@ -35,7 +36,7 @@ static void renderCaustics(Scene* scene /*...*/);
 static void drawEntity(const Entity* entity, RenderSystem::MVPset &MVP, ShaderLibrary &shaderlib);
 static void drawFlock(const Entity* entity);
 
-static void drawGeometry(const Geometry &geomcomp, RenderSystem::MVPset &MVP, Program &shader);
+static void drawGeometry(const Geometry &geomcomp, RenderSystem::MVPset &MVP);
 static void drawAntennae(/*...*/);
 static void drawLamp(/*...*/);
 
@@ -58,16 +59,12 @@ void RenderSystem::render(ApplicationState &appstate, GameState &gstate, double 
   MVP.M.loadIdentity();
   MVP.V = MatrixStack(updateView(gstate.activeScene->camera));
 
-  // This is a quick hack, will be removed once a materials infrastructure is in place
+  // This is a quick hack, will be replaced by 
   {
     appstate.resources.shaderlib.makeActive("blinn-phong");
     Program &prog = appstate.resources.shaderlib.getActive();
     glUniform3f(prog.getUniform("sunDir"), 0.5, -1.0, 1.0);
     glUniform3f(prog.getUniform("sunCol"), .7, .7, .65);
-    glUniform3f(prog.getUniform("matAmb"), .1, .1, .1);
-    glUniform3f(prog.getUniform("matDif"), .7, .7, .7);
-    glUniform3f(prog.getUniform("matSpec"), .4, .4, .4);
-    glUniform1f(prog.getUniform("shine"), 9.0);
   }
 
   computeLighting();
@@ -108,41 +105,46 @@ static void drawEntity(const Entity* entity, RenderSystem::MVPset &MVP, ShaderLi
   SolidMesh* mesh = NULL;
   Pose* pose = NULL;
   for(Component *cmpnt : entity->components){
-    mesh = dynamic_cast<SolidMesh*>(cmpnt) == NULL ? mesh : static_cast<SolidMesh*>(cmpnt);
-    pose = dynamic_cast<Pose*>(cmpnt) == NULL ? pose : static_cast<Pose*>(cmpnt);
+    GATHER_SINGLE_COMPONENT(mesh, SolidMesh*, cmpnt);
+    GATHER_SINGLE_COMPONENT(pose, Pose*, cmpnt);
     
     if(mesh && pose){
       MVP.M.multMatrix(pose->getAffineMatrix());
       for(Geometry &geo : mesh->geometries){
-        drawGeometry(geo, MVP, shaderlib.getActive());
+        shaderlib.fastActivate(geo.material.shader);
+        drawGeometry(geo, MVP);
       }
       return;
     }
   }
   if(mesh){
     for(Geometry &geo : mesh->geometries){
-        drawGeometry(geo, MVP, shaderlib.getActive());
+      shaderlib.fastActivate(geo.material.shader);
+      drawGeometry(geo, MVP);
     }
   }
 }
 
-static void drawGeometry(const Geometry &geomcomp, RenderSystem::MVPset &MVP, Program &shader){
+static void drawGeometry(const Geometry &geomcomp, RenderSystem::MVPset &MVP){
   int h_pos, h_nor, h_tex;
   h_pos = h_nor = h_tex = -1;
 
-  glUniformMatrix4fv(shader.getUniform("M"), 1, GL_FALSE, value_ptr(MVP.M.topMatrix()));
-  glUniformMatrix4fv(shader.getUniform("V"), 1, GL_FALSE, value_ptr(MVP.V.topMatrix()));
-  glUniformMatrix4fv(shader.getUniform("P"), 1, GL_FALSE, value_ptr(MVP.P.topMatrix()));
+  Program* shader = geomcomp.material.shader;
+  geomcomp.material.apply();
+
+  glUniformMatrix4fv(shader->getUniform("M"), 1, GL_FALSE, value_ptr(MVP.M.topMatrix()));
+  glUniformMatrix4fv(shader->getUniform("V"), 1, GL_FALSE, value_ptr(MVP.V.topMatrix()));
+  glUniformMatrix4fv(shader->getUniform("P"), 1, GL_FALSE, value_ptr(MVP.P.topMatrix()));
 
   glBindVertexArray(geomcomp.vaoID);
   // Bind position buffer
-  h_pos = shader.getAttribute("vertPos");
+  h_pos = shader->getAttribute("vertPos");
   GLSL::enableVertexAttribArray(h_pos);
   glBindBuffer(GL_ARRAY_BUFFER, geomcomp.posBufID);
   glVertexAttribPointer(h_pos, 3, GL_FLOAT, GL_FALSE, 0, (const void *)0);
   
   // Bind normal buffer
-  h_nor = shader.getAttribute("vertNor");
+  h_nor = shader->getAttribute("vertNor");
   if(h_nor != -1 && geomcomp.norBufID != 0) {
     GLSL::enableVertexAttribArray(h_nor);
     glBindBuffer(GL_ARRAY_BUFFER, geomcomp.norBufID);
@@ -151,7 +153,7 @@ static void drawGeometry(const Geometry &geomcomp, RenderSystem::MVPset &MVP, Pr
 
   if (geomcomp.texBufID != 0) {  
     // Bind texcoords buffer
-    h_tex = shader.getAttribute("vertTex");
+    h_tex = shader->getAttribute("vertTex");
     if(h_tex != -1 && geomcomp.texBufID != 0) {
       GLSL::enableVertexAttribArray(h_tex);
       glBindBuffer(GL_ARRAY_BUFFER, geomcomp.texBufID);

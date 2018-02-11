@@ -10,6 +10,7 @@
 #include <common.h>
 
 #include "../Component.hpp"
+#include "Material.hpp"
 
 
 // This class 
@@ -28,6 +29,8 @@ public:
 
   static void loadFullObj(const char* objname, vector<Geometry> &geometrysequence);
   // void draw(const std::shared_ptr<Program> shader) const;
+
+  Material material;
 
   glm::vec3 min;
   glm::vec3 max;

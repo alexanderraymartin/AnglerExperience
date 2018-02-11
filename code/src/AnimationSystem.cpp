@@ -20,8 +20,6 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
 
-#define GATHER_SINGLE_COMPONENT(_PT, _TYPE, _SRC) ( (_PT) = (((_PT) != NULL || dynamic_cast<_TYPE>((_SRC)) == NULL) ? (_PT) : static_cast<_TYPE>((_SRC))) )
-
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
         // Forward Declarations
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
