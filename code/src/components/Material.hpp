@@ -41,6 +41,9 @@ class Material : public Component{
   Material(Program* shader);
   Material(const string &shadername) : shadername(shadername) {}
   Material(const json &matjson, Program* shader);
+  Material(const string &path, ShaderLibrary &shaderlib);
+  Material(const char* path, ShaderLibrary &shaderlib) : Material(string(path), shaderlib) {}
+
 
   void setIntProp(const string &keyword, int prop);
   void setFloatProp(const string &keyword, float prop);
@@ -61,6 +64,8 @@ class Material : public Component{
   // mat4 getMat4Prop(const string &keyword);
 
   void apply() const;
+
+  void exportJSON(ostream &outstream) const;
 
   // If true the RenderSystem should check if the shader has a uniform before attempting to set it
   // This simply serves as a way to reduce warnings from OpenGL

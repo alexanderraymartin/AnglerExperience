@@ -24,6 +24,21 @@ Material::Material(const json &matjson, ShaderLibrary &shaderlib){
   resolveShader(shaderlib);
 }
 
+Material::Material(const string &path, ShaderLibrary &shaderlib){
+  ifstream matfile = ifstream(path);
+  json tmp;
+  if(matfile.is_open()){
+    matfile >> tmp;
+    matfile.close();
+    cout << "Loaded " << path << endl;
+    loadFromJSON(tmp);
+    resolveShader(shaderlib);
+  }else{
+    cerr << "Couldn't open material file " << path << endl;
+    shadername = "___missing___";
+  }
+}
+
 void Material::resolveShader(ShaderLibrary &shaderlib){
   if(shader == NULL && !shadername.empty()){
     shader = shaderlib.getPtr(shadername);
@@ -70,14 +85,12 @@ void Material::applyIndividual(const string &key, const json &value, Material::T
       glUniform1f(shader->getUniform(key), value.get<float>());
       break;
     case Prop_Type_Vec2:
-      std::cout << value << std::endl;
       glUniform2fv(shader->getUniform(key), 1, value.get<array<GLfloat, 2>>().data());
       break;
     case Prop_Type_Vec3:
       glUniform3fv(shader->getUniform(key), 1, value.get<array<GLfloat, 3>>().data());
       break;
     case Prop_Type_Vec4:
-      std::cout << value << std::endl;
       glUniform4fv(shader->getUniform(key), 1, value.get<array<GLfloat, 4>>().data());
       break;
     case Prop_Type_Mat2:
@@ -100,11 +113,21 @@ void Material::apply() const{
   }
 }
 
+void Material::exportJSON(ostream &outstream) const{
+  json tmp = {{"shader", shadername}, {"material", internalMaterial}};
+  outstream << tmp.dump(2) << endl;
+}
+
 void Material::loadFromJSON(const json &matjson){
-  if(matjson.find("shader") != matjson.end() && matjson.find("material") != matjson.end()){
-    shadername = matjson["shader"].get<const string>();
+  if(matjson.find("shader") != matjson.end() && matjson.find("material") != matjson.end()){ // All good
+    shadername = matjson["shader"].get<string>();
     internalMaterial = matjson["material"];
-  }else if(matjson.is_object()){
+  }else if(matjson.find("shader") != matjson.end()){ // Shader name given but not material
+    shadername = matjson["shader"].get<string>();
+  }else if(matjson.find("material") != matjson.end()){ // Material object given but not shader name
+    shadername = "___missing___";
+  }else if(matjson.is_object()){ // Just an object, assume it's an unlabeled material
+    shadername = "___missing___";
     internalMaterial = matjson;
   }else{
     fprintf(stderr, "Warning! Json object given for material appears to be malformed\n");

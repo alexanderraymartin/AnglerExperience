@@ -231,11 +231,7 @@ static void initScene(ApplicationState &appstate, GameState &gstate){
   {
     cube = new Entity();
 
-    Material mat(appstate.resources.shaderlib.getPtr("blinn-phong"));
-    mat.setVec3Prop("matAmb", glm::vec3(.1, .1, .1));
-    mat.setVec3Prop("matDif", glm::vec3(.7, .7, .75));
-    mat.setVec3Prop("matSpec", glm::vec3(.4, .4, .4));
-    mat.setFloatProp("shine", 9.0);
+    Material mat("" STRIFY(ASSET_DIR) "/simple-phong.mat", appstate.resources.shaderlib);
 
     vector<Geometry> cubegeo;
     Geometry::loadFullObj( "" STRIFY(ASSET_DIR) "/cube.obj", cubegeo);
