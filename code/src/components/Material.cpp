@@ -115,7 +115,6 @@ void Material::apply() const{
 
 void Material::exportJSON(ostream &outstream) const{
   json tmp = {{"shader", shadername}, {"material", internalMaterial}};
-  outstream << tmp.dump(2) << endl;
 }
 
 void Material::loadFromJSON(const json &matjson){

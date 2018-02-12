@@ -11,7 +11,7 @@ void ShaderLibrary::init(){
   istringstream evs(errorvs);
   istringstream efs(errorfs);
 
-  if(!fallback.buildVsFsProgram(&evs,&efs)){
+  if(!fallback.buildVsFsProgram(evs,efs)){
     exit(1212);
   }
   fallback.setVerbose(false);

@@ -21,7 +21,7 @@ Program::Program(const json &program_obj) : pid(0), verbose(true){
   }
 }
 
-Program::Program(istream *vertex, istream *fragment){
+Program::Program(istream &vertex, istream &fragment){
   if(!buildVsFsProgram(vertex, fragment)){
     fprintf(stderr, "Warning!: Failed building VsFs program given in constructor.\n");
   }
@@ -33,7 +33,7 @@ Program::~Program()
 }
 
 
-bool Program::buildVsFsProgram(istream *vertex, istream *fragment){  
+bool Program::buildVsFsProgram(istream &vertex, istream &fragment){  
   // Create shader handles
   GLuint VS = glCreateShader(GL_VERTEX_SHADER);
   GLuint FS = glCreateShader(GL_FRAGMENT_SHADER);
@@ -42,24 +42,19 @@ bool Program::buildVsFsProgram(istream *vertex, istream *fragment){
   char *fshader;
 
   // Read shader sources
-  if(vertex && fragment){
-    // Get number of chars in each source
-    vertex->seekg(0, vertex->end);
-    fragment->seekg(0, fragment->end);
-    size_t v_size = vertex->tellg();
-    size_t f_size = fragment->tellg();
-    vertex->seekg(vertex->beg);
-    fragment->seekg(fragment->beg);
+  // Get number of chars in each source
+  vertex.seekg(0, vertex.end);
+  fragment.seekg(0, fragment.end);
+  size_t v_size = vertex.tellg();
+  size_t f_size = fragment.tellg();
+  vertex.seekg(vertex.beg);
+  fragment.seekg(fragment.beg);
 
-    //Allocate char* for each source then copy
-    vshader = new char[v_size];
-    fshader = new char[f_size];
-    vertex->read(vshader, v_size);
-    fragment->read(fshader, f_size);
-  }else{
-    fprintf(stderr, "Istreams given to build VsFs program were invalid\n");
-    return(false);
-  }
+  //Allocate char* for each source then copy
+  vshader = new char[v_size];
+  fshader = new char[f_size];
+  vertex.read(vshader, v_size);
+  fragment.read(fshader, f_size);
   
   glShaderSource(VS, 1, &vshader, NULL);
   glShaderSource(FS, 1, &fshader, NULL);
