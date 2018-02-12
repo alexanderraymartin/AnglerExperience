@@ -67,6 +67,9 @@ class AnimatableMesh : public AnimationComponent{
   SolidMesh *getCurrentMesh() const {
     return meshes[index];
   }
+  SolidMesh *getNextMesh() const {
+    return meshes[(index + 1) % meshes.size()];
+  }
 };
 
 #endif

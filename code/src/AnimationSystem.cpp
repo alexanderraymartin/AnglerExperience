@@ -67,7 +67,7 @@ static void updateAnimatableMesh(AnimatableMesh *anim, double dt) {
   anim->dtLastKeyFrame += dt;
   if (anim->dtLastKeyFrame > anim->timePerKeyFrame) {
     anim->index = (anim->index + 1) % anim->meshes.size();
-    anim->dtLastKeyFrame -= anim->timePerKeyFrame;
+    anim->dtLastKeyFrame = 0;
   }
 }
 
