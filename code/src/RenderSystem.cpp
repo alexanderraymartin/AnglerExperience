@@ -9,6 +9,7 @@
 #include "components/SimpleComponents.hpp"
 #include "components/Geometry.hpp"
 #include "LightingComponents.hpp"
+#include "PostProcessor.h"
 
 // Disable complaints about all the placeholder functions
 #pragma GCC diagnostic push
@@ -17,6 +18,8 @@
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
         // Forward Declarations
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+PostProcessor* postProcessor;
 
 // draw Functions start general and get more specific
 
@@ -48,10 +51,12 @@ void RenderSystem::init(ApplicationState &appstate){
   glfwGetFramebufferSize(appstate.window, &w_width, &w_height);
   glViewport(0, 0, w_width, w_height);
   MVP.P = MatrixStack(glm::perspective(45.0, static_cast<double>(w_width)/w_height, .01, 100.0));
+  postProcessor = new PostProcessor(appstate.window);
 }
 
 void RenderSystem::render(ApplicationState &appstate, GameState &gstate, double elapsedTime){
 
+  postProcessor->start();
   // Added this so it isn't just black screen. 
   glClearColor( .18, .20, .22, 1.0);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -79,6 +84,7 @@ void RenderSystem::onResize(GLFWwindow *window, int width, int height){
   w_width = width;
   w_height = height;
   glViewport(0, 0, width, height);
+  postProcessor->resize();
 }
 
 
@@ -184,7 +190,9 @@ static void computeLighting(/*...*/){}
 static void drawBackground(/*...*/){}
 static void drawAngler(/*...*/){}
 static void drawEffects(/*...*/){}
-static void postProcess(/*...*/){}
+static void postProcess(){
+	postProcessor->doPostProcessing();
+}
 static void shadowMapping(Scene* scene /*...*/){}
 static void computeLighting(Scene* scene /*...*/){}
 static void renderCaustics(Scene* scene /*...*/){}
