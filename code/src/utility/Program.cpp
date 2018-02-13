@@ -1,6 +1,7 @@
 #include "Program.h"
 
 #include <iostream>
+#include <fstream>
 #include <cassert>
 
 #include "GLSL.h"
@@ -27,6 +28,21 @@ Program::Program(istream &vertex, istream &fragment){
   }
 }
 
+Program::Program(const string &vpath, const string &fpath){
+  ifstream vertex = ifstream(vpath);
+  ifstream fragment = ifstream(fpath);
+  if(!vertex.is_open()){
+    fprintf(stderr, "Warning!: Couldn't open given shader file: ");
+    cerr << vpath << endl;
+  }else if(!fragment.is_open()){
+    fprintf(stderr, "Warning!: Couldn't open given shader file: ");
+    cerr << fpath << endl;
+  }
+  if(!buildVsFsProgram(vertex, fragment)){
+    fprintf(stderr, "Warning!: Failed building VsFs program given in constructor.\n");
+  }
+}
+
 Program::~Program()
 {
   
@@ -38,30 +54,27 @@ bool Program::buildVsFsProgram(istream &vertex, istream &fragment){
   GLuint VS = glCreateShader(GL_VERTEX_SHADER);
   GLuint FS = glCreateShader(GL_FRAGMENT_SHADER);
 
-  char *vshader;
-  char *fshader;
+  string vshader;
+  string fshader;
 
   // Read shader sources
   // Get number of chars in each source
-  vertex.seekg(0, vertex.end);
-  fragment.seekg(0, fragment.end);
-  size_t v_size = vertex.tellg();
-  size_t f_size = fragment.tellg();
-  vertex.seekg(vertex.beg);
-  fragment.seekg(fragment.beg);
+  vertex.seekg(0, ios::end);
+  fragment.seekg(0, ios::end);
+  vshader.reserve((size_t) vertex.tellg());
+  fshader.reserve((size_t) fragment.tellg());
+  vertex.seekg(ios::beg);
+  fragment.seekg(ios::beg);
+
+  vshader.assign((std::istreambuf_iterator<char>(vertex)), std::istreambuf_iterator<char>());
+  fshader.assign((std::istreambuf_iterator<char>(fragment)), std::istreambuf_iterator<char>());
 
   //Allocate char* for each source then copy
-  vshader = new char[v_size];
-  fshader = new char[f_size];
-  vertex.read(vshader, v_size);
-  fragment.read(fshader, f_size);
+  const char* vshaderpt = vshader.c_str();
+  const char* fshaderpt = fshader.c_str();
   
-  glShaderSource(VS, 1, &vshader, NULL);
-  glShaderSource(FS, 1, &fshader, NULL);
-
-  // No memory leaks
-  delete vshader;
-  delete fshader;
+  glShaderSource(VS, 1, &vshaderpt, NULL);
+  glShaderSource(FS, 1, &fshaderpt, NULL);
   
   // Compile shaders
   if(!GLSL::compileAndCheck(VS, verbose)){

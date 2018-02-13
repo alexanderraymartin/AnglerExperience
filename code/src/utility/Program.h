@@ -22,6 +22,8 @@ public:
   Program(const json &program_obj);
 
   Program(istream &vertex, istream &fragment);
+
+  Program(const string &vpath, const string &fpath);
   
   virtual ~Program();
   
