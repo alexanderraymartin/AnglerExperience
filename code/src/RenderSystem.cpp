@@ -27,8 +27,6 @@ static void drawEntities(Scene* scene, RenderSystem::MVPset &MVP, ShaderLibrary 
 static void drawEffects(/*...*/);
 static void postProcess(/*...*/);
 
-static glm::mat4 updateView(Component* cmpnt);
-
 static void shadowMapping(Scene* scene /*...*/);
 static void computeLighting(Scene* scene /*...*/);
 static void renderCaustics(Scene* scene /*...*/);
@@ -47,7 +45,6 @@ static void drawLamp(/*...*/);
 void RenderSystem::init(ApplicationState &appstate){
   glfwGetFramebufferSize(appstate.window, &w_width, &w_height);
   glViewport(0, 0, w_width, w_height);
-  MVP.P = MatrixStack(glm::perspective(45.0, static_cast<double>(w_width)/w_height, .01, 100.0));
 }
 
 void RenderSystem::render(ApplicationState &appstate, GameState &gstate, double elapsedTime){
@@ -56,8 +53,14 @@ void RenderSystem::render(ApplicationState &appstate, GameState &gstate, double 
   glClearColor( .18, .20, .22, 1.0);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+  Camera* camera;
+  if(!(camera = gstate.activeScene->camera)){
+    return;
+  }
+  
+  MVP.P = MatrixStack(camera->getPerspective(static_cast<double>(w_width)/w_height));
   MVP.M.loadIdentity();
-  MVP.V = MatrixStack(updateView(gstate.activeScene->camera));
+  MVP.V = MatrixStack(camera->getView());
 
   // This is a quick hack, will be replaced by 
   {
@@ -86,14 +89,6 @@ void RenderSystem::onResize(GLFWwindow *window, int width, int height){
         // Static Functions and Helpers
 // It may be possible to move some parts of this into one or more libraries. 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-
-static glm::mat4 updateView(Component* cmpnt){
-  Camera* camera;
-  if((camera = dynamic_cast<Camera*>(cmpnt))){
-    return(camera->getView());
-  }
-  return(glm::mat4());
-}
 
 static void drawEntities(Scene* scene, RenderSystem::MVPset &MVP, ShaderLibrary &shaderlib){
   for(pair<const Entity*, Entity*> entpair : scene->entities){
