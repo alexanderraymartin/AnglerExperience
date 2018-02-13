@@ -166,16 +166,16 @@ void PostProcessor::initShaders()
 void PostProcessor::initBloomShaders()
 {
 	// bright_filter
-	brightFilterProg = new Program(ifstream("" STRIFY(SHADER_DIR) "/bloomShaders/pass.vert"), ifstream("" STRIFY(SHADER_DIR) "/bloomShaders/bright_filter.frag"));
+	brightFilterProg = new Program("" STRIFY(SHADER_DIR) "/bloomShaders/pass.vert", "" STRIFY(SHADER_DIR) "/bloomShaders/bright_filter.frag");
 	/////////////////////////////////////////////////////////////
 	// horizontal blur
-	hBlurProg = new Program(ifstream("" STRIFY(SHADER_DIR) "/bloomShaders/pass.vert"), ifstream("" STRIFY(SHADER_DIR) "/bloomShaders/horizontal_blur.frag"));
+	hBlurProg = new Program("" STRIFY(SHADER_DIR) "/bloomShaders/pass.vert", "" STRIFY(SHADER_DIR) "/bloomShaders/horizontal_blur.frag");
 	/////////////////////////////////////////////////////////////
 	// vertical blur
-	vBlurProg = new Program(ifstream("" STRIFY(SHADER_DIR) "/bloomShaders/pass.vert"), ifstream("" STRIFY(SHADER_DIR) "/bloomShaders/vertical_blur.frag"));
+	vBlurProg = new Program("" STRIFY(SHADER_DIR) "/bloomShaders/pass.vert", "" STRIFY(SHADER_DIR) "/bloomShaders/vertical_blur.frag");
 	/////////////////////////////////////////////////////////////
 	// combine
-	combineProg = new Program(ifstream("" STRIFY(SHADER_DIR) "/bloomShaders/pass.vert"), ifstream("" STRIFY(SHADER_DIR) "/bloomShaders/combine.frag"));
+	combineProg = new Program("" STRIFY(SHADER_DIR) "/bloomShaders/pass.vert", "" STRIFY(SHADER_DIR) "/bloomShaders/combine.frag");
 }
 
 void PostProcessor::initQuad()
