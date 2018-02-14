@@ -10,6 +10,9 @@
 
 #include <GLFW/glfw3.h>
 
+#define APPSTATE ApplicationState
+#define TLRES TopLevelResources
+
 using namespace std;
 
 // Application type should be set to differentiate between internally between an instance of the 
@@ -26,11 +29,16 @@ enum class ApplicationType{
   // Add more as you see fit
 };
 
+struct TopLevelResources{
+    ShaderLibrary shaderlib;
+    // FontLibrary fonts;
+    // Library/SDK instances 
+};
+
 // We can continue to fill this out as we move forward. It should only hold information key to the
 // very core c++ application, and not anything directly tied to gameplay or assets
 struct ApplicationState{
   GLFWwindow* window;
-  const char* resource_dir = "./gameassets/";
   ApplicationType apptype = APPTYPE;
 
   bool firstRun = true; // In case of edge cases where special ops need to be done on first loop;n
@@ -39,12 +47,11 @@ struct ApplicationState{
 
   // Global stats collection such as number of total frames rendered
   unsigned long framesCompleted = 0;
+
+  TopLevelResources resources;
+  
 };
 
-struct TopLevelResources{
-  ShaderLibrary shaderlib;
-  // FontLibrary fonts;
-  // Library/SDK instances 
-};
+
 
 #endif
