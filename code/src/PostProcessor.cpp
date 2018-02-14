@@ -7,21 +7,9 @@ PostProcessor::PostProcessor(GLFWwindow* window)
 	init();
 }
 
-void PostProcessor::start()
+void PostProcessor::doPostProcessing(GLuint texBufGiven)
 {
-	if (hasBloom())
-	{
-		glBindFramebuffer(GL_FRAMEBUFFER, frameBuf[0]);
-	}
-	else
-	{
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	}
-}
-
-void PostProcessor::doPostProcessing()
-{
-	if (hasBloom()) processBloom();
+	if (hasBloom()) processBloom(texBufGiven);
 }
 
 void PostProcessor::toggleBloom()
@@ -102,27 +90,27 @@ void PostProcessor::applyCombine(GLuint colorTex, GLuint brightTex)
 	combineProg->unbind();
 }
 
-void PostProcessor::processBloom()
+void PostProcessor::processBloom(GLuint texBufGiven)
 {
 	// Bright filter
 	glBindFramebuffer(GL_FRAMEBUFFER, frameBuf[1]);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	applyBrightFilter(texBuf[0]);
+	applyBrightFilter(texBufGiven);
 
 	// Horizontal blur
 	glBindFramebuffer(GL_FRAMEBUFFER, frameBuf[2]);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	applyHBlur(texBuf[1]);
+	applyHBlur(texBuf[0]);
 
 	// Vertical blur
 	glBindFramebuffer(GL_FRAMEBUFFER, frameBuf[1]);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	applyVBlur(texBuf[2]);
+	applyVBlur(texBuf[1]);
 
 	// Combine
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	applyCombine(texBuf[0], texBuf[1]);
+	applyCombine(texBufGiven, texBuf[0]);
 }
 
 void PostProcessor::init()
@@ -137,9 +125,10 @@ void PostProcessor::init()
 	initQuad();
 
 	//create three frame buffer objects to toggle between
-	glGenFramebuffers(3, frameBuf);
-	glGenTextures(3, texBuf);
+	glGenFramebuffers(2, frameBuf);
+	glGenTextures(2, texBuf);
 	glGenRenderbuffers(1, &depthBuf);
+	
 	createFBO(frameBuf[0], texBuf[0]);
 
 	//set up depth necessary as rendering a mesh that needs depth test
@@ -153,9 +142,6 @@ void PostProcessor::init()
 
 	//create another FBO so we can swap back and forth
 	createFBO(frameBuf[1], texBuf[1]);
-
-	//create another FBO so we can swap back and forth
-	createFBO(frameBuf[2], texBuf[2]);
 }
 
 void PostProcessor::initShaders()

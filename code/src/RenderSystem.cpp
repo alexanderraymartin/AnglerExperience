@@ -56,10 +56,11 @@ void RenderSystem::init(ApplicationState &appstate){
 
 void RenderSystem::render(ApplicationState &appstate, GameState &gstate, double elapsedTime){
 
-  postProcessor->start();
   // Added this so it isn't just black screen. 
   glClearColor( .18, .20, .22, 1.0);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
   MVP.M.loadIdentity();
   MVP.V = MatrixStack(updateView(gstate.activeScene->camera));
@@ -89,7 +90,7 @@ void RenderSystem::onResize(GLFWwindow *window, int width, int height){
 
 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-        // Static Functions and Helpers
+// Static Functions and Helpers
 // It may be possible to move some parts of this into one or more libraries. 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
@@ -191,7 +192,8 @@ static void drawBackground(/*...*/){}
 static void drawAngler(/*...*/){}
 static void drawEffects(/*...*/){}
 static void postProcess(){
-	postProcessor->doPostProcessing();
+	// TODO: pass texture as parameter
+	postProcessor->doPostProcessing(0);
 }
 static void shadowMapping(Scene* scene /*...*/){}
 static void computeLighting(Scene* scene /*...*/){}
