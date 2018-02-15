@@ -204,6 +204,7 @@ static void initShaders(ApplicationState &appstate){
   shaderfile >> shaderjson;
   for(json &j : shaderjson["pairs"]){
     appstate.resources.shaderlib.add(j[0]["basename"].get<string>(), new Program(j));
+    cout << "Loaded shader: " << j[0]["basename"].get<string>() << endl;
   }
 
   // TODO: Iterate through given shader source files, compile them, and store the in the shaderlib.
