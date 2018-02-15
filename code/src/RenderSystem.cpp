@@ -20,12 +20,10 @@ static void prepareDeferred(GLuint gbuffer);
 static void initBuffers(int width, int height, RenderSystem::Buffers &buffers);
 static void bindBuffers(RenderSystem::Buffers &buffers, Program* shader);
 
-static void drawEntities(Scene* scene, RenderSystem::MVPset &MVP, ShaderLibrary &shaderlib);
 static void postProcess(/*...*/);
 
+static void drawEntities(Scene* scene, RenderSystem::MVPset &MVP, ShaderLibrary &shaderlib);
 static void drawEntity(const Entity* entity, RenderSystem::MVPset &MVP, ShaderLibrary &shaderlib);
-static void drawFlock(const Entity* entity);
-
 static void drawGeometry(const Geometry &geomcomp, RenderSystem::MVPset &MVP, Program* shader);
 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -36,31 +34,28 @@ void RenderSystem::init(ApplicationState &appstate){
   glfwGetFramebufferSize(appstate.window, &w_width, &w_height);
   glViewport(0, 0, w_width, w_height);
 
-  initQuad(quadVAO, quadVBO);
+  shaderlib = &appstate.resources.shaderlib;
 
-  deferred_export = appstate.resources.shaderlib.getPtr("deferred-export");
-  deferred_uber = appstate.resources.shaderlib.getPtr("deferred-uber");
+  deferred_export = shaderlib->getPtr("deferred-export");
+  deferred_uber = shaderlib->getPtr("deferred-uber");
 
   glDisable(GL_BLEND);
 
   initBuffers(w_width, w_height, deferred_buffers);
 
-  defFBO2 = 0;
+  deferred_fbo = 0;
 
-  glBindFramebuffer(GL_FRAMEBUFFER, defFBO2);
+  glBindFramebuffer(GL_FRAMEBUFFER, deferred_fbo);
 
-  // appstate.resources.shaderlib.fastActivate(deferred_uber);
-  // glUniform1i(deferred_uber->getUniform("gPosition"), 0);
-  // glUniform1i(deferred_uber->getUniform("gNormal"), 1);
-  // glUniform1i(deferred_uber->getUniform("gAlbedoSpec"), 2);
+  shaderlib->fastActivate(deferred_uber);
+  glUniform1i(deferred_uber->getUniform("gPosition"), 0);
+  glUniform1i(deferred_uber->getUniform("gNormal"), 1);
+  glUniform1i(deferred_uber->getUniform("gAlbedoSpec"), 2);
+
+  initQuad(quadVAO, quadVBO);
 }
 
 void RenderSystem::render(ApplicationState &appstate, GameState &gstate, double elapsedTime){
-
-  // Added this so it isn't just black screen. 
-  // glClearColor( .18, .20, .22, 1.0);
-  // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
   Camera* camera;
   if(!(camera = gstate.activeScene->camera)){
     return;
@@ -70,26 +65,17 @@ void RenderSystem::render(ApplicationState &appstate, GameState &gstate, double 
   MVP.M.loadIdentity();
   MVP.V = MatrixStack(camera->getView());
 
-  // This is a quick hack, will be replaced by 
-  /*{
-    appstate.resources.shaderlib.makeActive("blinn-phong");
-    Program &prog = appstate.resources.shaderlib.getActive();
-    glUniform3f(prog.getUniform("sunDir"), 0.5, -1.0, 1.0);
-    glUniform3f(prog.getUniform("sunCol"), .7, .7, .65);
-  }*/
-
-  // Deferred lighting
   prepareDeferred(deferred_buffers.gBuffer);
-  drawEntities(gstate.activeScene, MVP, appstate.resources.shaderlib);
-  applyShading(gstate.activeScene, appstate.resources.shaderlib);
+  drawEntities(gstate.activeScene);
+  applyShading(gstate.activeScene, *shaderlib);
 
   // postProcess();
 
 }
 
 void RenderSystem::applyShading(Scene* scene, ShaderLibrary &shaderlib){
-  glBindFramebuffer(GL_FRAMEBUFFER, defFBO2);
-  glClearColor(0.6f, 1.0f, 0.4f, 1.0f);
+  glBindFramebuffer(GL_FRAMEBUFFER, deferred_fbo);
+  glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
   shaderlib.fastActivate(deferred_uber);
@@ -111,13 +97,13 @@ void RenderSystem::onResize(GLFWwindow *window, int width, int height){
 // It may be possible to move some parts of this into one or more libraries. 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
-static void drawEntities(Scene* scene, RenderSystem::MVPset &MVP, ShaderLibrary &shaderlib){
+void RenderSystem::drawEntities(Scene* scene){
   for(pair<const Entity*, Entity*> entpair : scene->entities){
-    drawEntity(entpair.second, MVP, shaderlib);
+    drawEntity(entpair.second);
   }
 }
 
-static void drawEntity(const Entity* entity, RenderSystem::MVPset &MVP, ShaderLibrary &shaderlib){
+void RenderSystem::drawEntity(const Entity* entity){
   SolidMesh* mesh = NULL;
   Pose* pose = NULL;
   for(Component *cmpnt : entity->components){
@@ -127,16 +113,16 @@ static void drawEntity(const Entity* entity, RenderSystem::MVPset &MVP, ShaderLi
     if(mesh && pose){
       MVP.M.multMatrix(pose->getAffineMatrix());
       for(Geometry &geo : mesh->geometries){
-        shaderlib.fastActivate(geo.material.shader);
-        drawGeometry(geo, MVP, shaderlib.getPtr("deferred-export"));
+        shaderlib->fastActivate(deferred_export);
+        drawGeometry(geo, MVP, deferred_export);
       }
       return;
     }
   }
   if(mesh){
     for(Geometry &geo : mesh->geometries){
-      shaderlib.fastActivate(geo.material.shader);
-      drawGeometry(geo, MVP, shaderlib.getPtr("deferred-export"));
+      shaderlib->fastActivate(deferred_export);
+      drawGeometry(geo, MVP, deferred_export);
     }
   }
 }
@@ -222,7 +208,7 @@ static void initQuad(GLuint &quadVAO, GLuint &quadVBO) {
 
 static void prepareDeferred(GLuint gbuffer){
   (glBindFramebuffer(GL_FRAMEBUFFER, gbuffer));
-  (glClearColor(0.0f, 0.0f, 0.5f, 1.0f));
+  (glClearColor(0.0f, 0.0f, 0.0f, 1.0f));
   (glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
 }
 

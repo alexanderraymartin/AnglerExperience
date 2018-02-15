@@ -23,13 +23,14 @@ namespace RenderSystem{
 	static int w_width, w_height;
 
 	// Any data structures used inbetween renders should also be stored here as static
-	static GLuint defFBO1, defFBO2;
-
 	static GLuint quadVAO;
 	static GLuint quadVBO;
 
+	static GLuint deferred_fbo;
 	static Program* deferred_export = NULL;
 	static Program* deferred_uber = NULL;
+
+	static ShaderLibrary* shaderlib = NULL;
 
 	struct Buffers {
 		std::vector<unsigned int> buffers;
@@ -51,6 +52,10 @@ namespace RenderSystem{
 	void render(ApplicationState &appstate, GameState &gstate, double elapsedTime);
 
 	void applyShading(Scene* scene, ShaderLibrary &shaderlib);
+
+	void drawEntities(Scene* scene);
+
+	void drawEntity(const Entity* entity);
 
 	void onResize(GLFWwindow *window, int width, int height);
 
