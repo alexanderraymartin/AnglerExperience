@@ -23,7 +23,21 @@ namespace RenderSystem{
 	static int w_width, w_height;
 
 	// Any data structures used inbetween renders should also be stored here as static
-	static GLuint FBOpair[2]; 
+	static GLuint quadVAO;
+	static GLuint quadVBO;
+
+	static GLuint deferred_fbo;
+	static Program* deferred_export = NULL;
+	static Program* deferred_uber = NULL;
+
+	static ShaderLibrary* shaderlib = NULL;
+
+	struct Buffers {
+		std::vector<unsigned int> buffers;
+		unsigned int gBuffer, depthBuffer;
+	};
+
+	static Buffers deferred_buffers;
 
 	struct MVPset{
 		MatrixStack M;
@@ -36,6 +50,12 @@ namespace RenderSystem{
 	void init(ApplicationState &appstate);
 
 	void render(ApplicationState &appstate, GameState &gstate, double elapsedTime);
+
+	void applyShading(Scene* scene, ShaderLibrary &shaderlib);
+
+	void drawEntities(Scene* scene);
+
+	void drawEntity(const Entity* entity);
 
 	void onResize(GLFWwindow *window, int width, int height);
 
