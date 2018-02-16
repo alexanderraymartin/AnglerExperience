@@ -7,12 +7,10 @@ PostProcessor::PostProcessor(GLFWwindow* window)
 	init();
 }
 
-void PostProcessor::doPostProcessing(GLuint deferred_fbo)
+void PostProcessor::doPostProcessing(GLuint texture)
 {
 	if (hasBloom()) 
 	{
-		// TODO: Get texture from FBO
-		GLuint texture;
 		processBloom(texture);
 	}
 }
@@ -129,18 +127,11 @@ void PostProcessor::init()
 	glGenFramebuffers(2, frameBuf);
 	glGenTextures(2, texBuf);
 	glGenRenderbuffers(1, &depthBuf);
+
+	// create FBO 
 	createFBO(frameBuf[0], texBuf[0]);
 
-	//set up depth necessary as rendering a mesh that needs depth test
-	glBindRenderbuffer(GL_RENDERBUFFER, depthBuf);
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, windowWidth, windowHeight);
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthBuf);
-
-	//more FBO set up
-	GLenum DrawBuffers[1] = { GL_COLOR_ATTACHMENT0 };
-	glDrawBuffers(1, DrawBuffers);
-
-	//create another FBO so we can swap back and forth
+	// create FBO 2 to ping-pong back and forth
 	createFBO(frameBuf[1], texBuf[1]);
 }
 
