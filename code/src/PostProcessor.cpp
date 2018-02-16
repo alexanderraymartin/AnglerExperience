@@ -3,15 +3,17 @@
 PostProcessor::PostProcessor(GLFWwindow* window)
 {
 	this->window = window;
+	initShaders();
 	init();
 }
 
-void PostProcessor::doPostProcessing(GLuint texture)
+void PostProcessor::doPostProcessing(GLuint deferred_fbo)
 {
 	if (hasBloom()) 
 	{
-		copyFBOTexture(texture, frameBuf[0], texBuf[0]);
-		processBloom();
+		// TODO: Get texture from FBO
+		GLuint texture;
+		processBloom(texture);
 	}
 }
 
@@ -93,45 +95,39 @@ void PostProcessor::applyCombine(GLuint colorTex, GLuint brightTex)
 	combineProg->unbind();
 }
 
-void PostProcessor::processBloom()
+void PostProcessor::processBloom(GLuint texture)
 {
 	// Bright filter
-	glBindFramebuffer(GL_FRAMEBUFFER, frameBuf[1]);
+	glBindFramebuffer(GL_FRAMEBUFFER, frameBuf[0]);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	applyBrightFilter(texBuf[0]);
+	applyBrightFilter(texture);
 
 	// Horizontal blur
-	glBindFramebuffer(GL_FRAMEBUFFER, frameBuf[2]);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	applyHBlur(texBuf[1]);
-
-	// Vertical blur
 	glBindFramebuffer(GL_FRAMEBUFFER, frameBuf[1]);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	applyVBlur(texBuf[2]);
+	applyHBlur(texBuf[0]);
+
+	// Vertical blur
+	glBindFramebuffer(GL_FRAMEBUFFER, frameBuf[0]);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	applyVBlur(texBuf[1]);
 
 	// Combine
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	applyCombine(texBuf[0], texBuf[1]);
+	applyCombine(texture, texBuf[0]);
 }
 
 void PostProcessor::init()
 {
-	GLFWmonitor* primary = glfwGetPrimaryMonitor();
-	const GLFWvidmode* pmodes = glfwGetVideoMode(primary);
-
-	windowWidth = pmodes->width;
-	windowHeight = pmodes->height;
-
+	glfwGetFramebufferSize(window, &windowWidth, &windowHeight);
 	glViewport(0, 0, windowWidth, windowHeight);
 
-	initShaders();
 	initQuad();
 
 	//create three frame buffer objects to toggle between
-	glGenFramebuffers(3, frameBuf);
-	glGenTextures(3, texBuf);
+	glGenFramebuffers(2, frameBuf);
+	glGenTextures(2, texBuf);
 	glGenRenderbuffers(1, &depthBuf);
 	createFBO(frameBuf[0], texBuf[0]);
 
@@ -146,9 +142,6 @@ void PostProcessor::init()
 
 	//create another FBO so we can swap back and forth
 	createFBO(frameBuf[1], texBuf[1]);
-
-	//create another FBO so we can swap back and forth
-	createFBO(frameBuf[2], texBuf[2]);
 }
 
 void PostProcessor::initShaders()
@@ -213,22 +206,4 @@ void PostProcessor::createFBO(GLuint& fb, GLuint& tex)
 		std::cout << "Error setting up frame buffer - exiting" << std::endl;
 		exit(0);
 	}
-}
-
-void PostProcessor::copyFBOTexture(GLuint& textureIn, GLuint& fboOut, GLuint& textureOut)
-{
-	// Bind input FBO + texture to a color attachment
-	glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
-	glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureIn, 0);
-	glReadBuffer(GL_COLOR_ATTACHMENT0);
-
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fboOut);
-	glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureOut, 0);
-	glDrawBuffer(GL_COLOR_ATTACHMENT0);
-
-	// copy fbo
-	glBlitFramebuffer(0, 0, windowWidth, windowHeight, 0, 0, windowWidth, windowHeight, GL_COLOR_BUFFER_BIT, GL_NEAREST);
-
-	// unbind the color attachment
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, 0, 0);
 }

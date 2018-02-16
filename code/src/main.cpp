@@ -171,6 +171,7 @@ static void initGLFW(ApplicationState &appstate){
   UINT w_height = 480;
 
   GLFWmonitor* monitor = autoDetectScreen(&w_width, &w_height);
+  monitor = NULL;
 
   fprintf(stderr, "Auto-selected %ux%u %s for screen config\n",
     w_width,

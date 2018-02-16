@@ -10,7 +10,7 @@ class PostProcessor
 {
 public:
 	PostProcessor(GLFWwindow* window);
-	void doPostProcessing(GLuint texture);
+	void doPostProcessing(GLuint deferred_fbo);
 	void toggleBloom();
 	bool hasBloom();
 	void resize();
@@ -22,7 +22,7 @@ private:
 	void applyHBlur(GLuint brightTex);
 	void applyVBlur(GLuint brightTex);
 	void applyCombine(GLuint colorTex, GLuint brightTex);
-	void processBloom();
+	void processBloom(GLuint texture);
 	/***************************************/
 
 	void init();
@@ -30,15 +30,14 @@ private:
 	void initBloomShaders();
 	void initQuad();
 	void createFBO(GLuint& fb, GLuint& tex);
-	void copyFBOTexture(GLuint& textureIn, GLuint& fboOut, GLuint& textureOut);
 
 	//geometry for texture render
 	GLuint quad_VertexArrayID;
 	GLuint quad_vertexbuffer;
 
 	//reference to texture FBO
-	GLuint frameBuf[3];
-	GLuint texBuf[3];
+	GLuint frameBuf[2];
+	GLuint texBuf[2];
 	GLuint depthBuf;
 
 	/***************************************/
@@ -54,6 +53,6 @@ private:
 	int windowWidth, windowHeight;
 	GLFWwindow* window;
 
-	bool _hasBloom = true;
+	bool _hasBloom = false;
 };
 

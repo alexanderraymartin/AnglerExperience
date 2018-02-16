@@ -1,3 +1,4 @@
+
 #include "RenderSystem.hpp"
 #include <common.h>
 #include <GLSL.h>
@@ -15,8 +16,6 @@
 // Forward Declarations
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
-PostProcessor* postProcessor;
-
 static void initQuad(GLuint &quadVAO, GLuint &quadVBO);
 static void prepareDeferred(GLuint gbuffer);
 static void initBuffers(int width, int height, RenderSystem::Buffers &buffers);
@@ -24,13 +23,38 @@ static void bindBuffers(RenderSystem::Buffers &buffers, Program* shader);
 
 static void postProcess();
 
-static void drawEntities(Scene* scene, RenderSystem::MVPset &MVP, ShaderLibrary &shaderlib);
-static void drawEntity(const Entity* entity, RenderSystem::MVPset &MVP, ShaderLibrary &shaderlib);
+static void createBuffer(int width, int height, vector<unsigned int> &buffers, unsigned int channel_type, unsigned int channels, unsigned int type);
+static void setBuffers(RenderSystem::Buffers &buffers);
+static void setDepthBuffer(int width, int height, RenderSystem::Buffers &buffers);
 static void drawGeometry(const Geometry &geomcomp, RenderSystem::MVPset &MVP, Program* shader);
 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 // RenderSystem functions
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+static RenderSystem::Buffers secondPassBuffer;
+static PostProcessor* postProcessor;
+
+static void initTempBuffer(int width, int height, RenderSystem::Buffers &buffers) {
+	//set up to render to an intermediary buffer
+	glGenFramebuffers(1, &(buffers.gBuffer));
+	glBindFramebuffer(GL_FRAMEBUFFER, buffers.gBuffer);
+	//32 bit floats may not be supported on some systems.
+	createBuffer(width, height, buffers.buffers, GL_RGBA, GL_RGBA, GL_FLOAT); //color/shine buffer
+	setBuffers(buffers);
+	setDepthBuffer(width, height, buffers);                            //Depth buffer
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		fprintf(stderr, "Framebuffer not complete!\n");
+}
+
+static void bindSecondPassBuffer(RenderSystem::Buffers &buffers, Program* shader) {
+	for (int i = 0; i < buffers.buffers.size(); i++) {
+		glActiveTexture(GL_TEXTURE0 + i);
+		glBindTexture(GL_TEXTURE_2D, buffers.buffers.at(i));
+	}
+	//Rename this to whatever you want to call your color texture
+	glUniform1i(shader->getUniform("dColor"), 0);
+
+}
 
 void RenderSystem::init(ApplicationState &appstate) {
 	glfwGetFramebufferSize(appstate.window, &w_width, &w_height);
@@ -43,9 +67,12 @@ void RenderSystem::init(ApplicationState &appstate) {
 
 	glDisable(GL_BLEND);
 
+
 	initBuffers(w_width, w_height, deferred_buffers);
 
-	deferred_fbo = 0;
+	//Added this
+	initTempBuffer(w_width, w_height, secondPassBuffer);
+	deferred_fbo = secondPassBuffer.gBuffer;
 
 	glBindFramebuffer(GL_FRAMEBUFFER, deferred_fbo);
 
@@ -92,7 +119,7 @@ void RenderSystem::onResize(GLFWwindow *window, int width, int height) {
 	w_width = width;
 	w_height = height;
 	glViewport(0, 0, width, height);
-	postProcessor->resize();
+	//postProcessor->resize();
 }
 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -189,7 +216,8 @@ static void drawGeometry(const Geometry &geomcomp, RenderSystem::MVPset &MVP, Pr
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
 
-static void initQuad(GLuint &quadVAO, GLuint &quadVBO) {
+static void initQuad(GLuint &quadVAO, GLuint &quadVBO)
+{
 	float quadVertices[] = {
 		// positions        // texture Coords
 		-1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
@@ -209,13 +237,15 @@ static void initQuad(GLuint &quadVAO, GLuint &quadVBO) {
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
 }
 
-static void prepareDeferred(GLuint gbuffer) {
+static void prepareDeferred(GLuint gbuffer)
+{
 	(glBindFramebuffer(GL_FRAMEBUFFER, gbuffer));
 	(glClearColor(0.0f, 0.0f, 0.0f, 1.0f));
 	(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
 }
 
-static void bindBuffers(RenderSystem::Buffers &buffers, Program* shader) {
+static void bindBuffers(RenderSystem::Buffers &buffers, Program* shader)
+{
 	for (int i = 0; i < buffers.buffers.size(); i++) {
 		glActiveTexture(GL_TEXTURE0 + i);
 		glBindTexture(GL_TEXTURE_2D, buffers.buffers.at(i));
@@ -228,10 +258,11 @@ static void bindBuffers(RenderSystem::Buffers &buffers, Program* shader) {
 
 void postProcess()
 {
-	postProcessor->doPostProcessing(0);
+	//postProcessor->doPostProcessing(RenderSystem::deferred_fbo);
 }
 
-static void setBuffers(RenderSystem::Buffers &buffers) {
+static void setBuffers(RenderSystem::Buffers &buffers)
+{
 	vector<unsigned int> attachments;
 	for (int i = 0; i < buffers.buffers.size(); i++) {
 		//size - i because we want the list to be [0,1,2] not [2,1,0]
@@ -240,7 +271,8 @@ static void setBuffers(RenderSystem::Buffers &buffers) {
 	glDrawBuffers(3, attachments.data());
 }
 
-static void createBuffer(int width, int height, vector<unsigned int> &buffers, unsigned int channel_type, unsigned int channels, unsigned int type) {
+static void createBuffer(int width, int height, vector<unsigned int> &buffers, unsigned int channel_type, unsigned int channels, unsigned int type)
+{
 	unsigned int buffer;
 	glGenTextures(1, &buffer);
 	glBindTexture(GL_TEXTURE_2D, buffer);
@@ -251,14 +283,16 @@ static void createBuffer(int width, int height, vector<unsigned int> &buffers, u
 	buffers.push_back(buffer);
 }
 
-static void setDepthBuffer(int width, int height, RenderSystem::Buffers &buffers) {
+static void setDepthBuffer(int width, int height, RenderSystem::Buffers &buffers)
+{
 	(glGenRenderbuffers(1, &buffers.depthBuffer));
 	(glBindRenderbuffer(GL_RENDERBUFFER, buffers.depthBuffer));
 	(glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, width, height));
 	(glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, buffers.depthBuffer));
 }
 
-static void initBuffers(int width, int height, RenderSystem::Buffers &buffers) {
+static void initBuffers(int width, int height, RenderSystem::Buffers &buffers)
+{
 	//set up to render to an intermediary buffer
 	glGenFramebuffers(1, &(buffers.gBuffer));
 	glBindFramebuffer(GL_FRAMEBUFFER, buffers.gBuffer);
