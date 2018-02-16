@@ -5,8 +5,8 @@
 #define _USE_MATH_DEFINES
 #include <cmath>
 
-#define GLEW_STATIC
-#include <GL/glew.h>
+#include <glad/glad.h>
+
 #include "utility/GLSL.h"
 
 #include <GLFW/glfw3.h>
@@ -128,9 +128,8 @@ int main(int argc, char** argv){
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 static void initGL(){
-  glewExperimental = true;
-  if(glewInit() != GLEW_OK) {
-    cerr << "Failed to initialize GLEW" << endl;
+  if(!gladLoadGL()){
+    cerr << "Failed to initialize GLAD" << endl;
     exit(-1);
   }
   glGetError();

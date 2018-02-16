@@ -35,6 +35,7 @@ else()
 endif()
 
 
+set(GLAD_DIR "${CMAKE_SOURCE_DIR}/libs/glad")
 
 # Stolen from Ian Dunn
 function(BuildProperties TargetName)
@@ -56,6 +57,9 @@ function(BuildProperties TargetName)
   else()
     target_link_libraries(${TargetName} ${GLEW_DIR}/lib/libGLEW.a)
   endif()
+
+  target_link_libraries(${TargetName} gladTarget)
+  target_include_directories(${TargetName} PUBLIC "${GLAD_DIR}/include")
 
   # OS specific options and libraries
   if(WIN32)
@@ -89,6 +93,8 @@ endfunction(BuildProperties)
 add_subdirectory("src/utility")
 
 add_subdirectory("libs/TinyObj")
+
+add_subdirectory("${GLAD_DIR}/src")
 
 file(GLOB SOURCES "src/*.cpp" "src/components/*.cpp")
 

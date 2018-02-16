@@ -7,8 +7,7 @@
 #include <string>
 #include <json.hpp>
 
-#define GLEW_STATIC
-#include <GL/glew.h>
+#include <glad/glad.h>
 
 using namespace std;
 using json = nlohmann::json;
