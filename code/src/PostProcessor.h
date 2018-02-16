@@ -10,7 +10,7 @@ class PostProcessor
 {
 public:
 	PostProcessor(GLFWwindow* window);
-	void doPostProcessing(GLuint deferred_fbo);
+	void doPostProcessing(GLuint texture);
 	void toggleBloom();
 	bool hasBloom();
 	void resize();

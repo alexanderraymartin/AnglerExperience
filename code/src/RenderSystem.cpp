@@ -41,19 +41,9 @@ static void initTempBuffer(int width, int height, RenderSystem::Buffers &buffers
 	//32 bit floats may not be supported on some systems.
 	createBuffer(width, height, buffers.buffers, GL_RGBA, GL_RGBA, GL_FLOAT); //color/shine buffer
 	setBuffers(buffers);
-	setDepthBuffer(width, height, buffers);                            //Depth buffer
+	//setDepthBuffer(width, height, buffers);                            //Depth buffer
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 		fprintf(stderr, "Framebuffer not complete!\n");
-}
-
-static void bindSecondPassBuffer(RenderSystem::Buffers &buffers, Program* shader) {
-	for (int i = 0; i < buffers.buffers.size(); i++) {
-		glActiveTexture(GL_TEXTURE0 + i);
-		glBindTexture(GL_TEXTURE_2D, buffers.buffers.at(i));
-	}
-	//Rename this to whatever you want to call your color texture
-	glUniform1i(shader->getUniform("dColor"), 0);
-
 }
 
 void RenderSystem::init(ApplicationState &appstate) {
@@ -119,7 +109,7 @@ void RenderSystem::onResize(GLFWwindow *window, int width, int height) {
 	w_width = width;
 	w_height = height;
 	glViewport(0, 0, width, height);
-	//postProcessor->resize();
+	postProcessor->resize();
 }
 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -258,7 +248,7 @@ static void bindBuffers(RenderSystem::Buffers &buffers, Program* shader)
 
 void postProcess()
 {
-	//postProcessor->doPostProcessing(RenderSystem::deferred_fbo);
+	postProcessor->doPostProcessing(secondPassBuffer.buffers.at(0));
 }
 
 static void setBuffers(RenderSystem::Buffers &buffers)
