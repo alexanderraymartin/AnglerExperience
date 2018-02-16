@@ -90,8 +90,6 @@ add_subdirectory("src/utility")
 
 add_subdirectory("libs/TinyObj")
 
-add_subdirectory("${GLAD_DIR}/src")
-
 file(GLOB SOURCES "src/*.cpp" "src/components/*.cpp")
 
 # We don't really need to include header and resource files to build, but it's
