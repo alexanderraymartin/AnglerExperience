@@ -36,5 +36,5 @@ void main()
         lighting += (diffuse + shineLight) * attenuation;
     }
     
-    FragColor = vec4(lighting, 1.0);
+    FragColor = vec4(FragPos, 1.0);
 }  

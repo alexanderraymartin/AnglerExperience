@@ -53,6 +53,6 @@ private:
 	int windowWidth, windowHeight;
 	GLFWwindow* window;
 
-	bool _hasBloom = false;
+	bool _hasBloom = true;
 };
 

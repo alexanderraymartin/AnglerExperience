@@ -258,7 +258,7 @@ static void setBuffers(RenderSystem::Buffers &buffers)
 		//size - i because we want the list to be [0,1,2] not [2,1,0]
 		attachments.push_back(GL_COLOR_ATTACHMENT0 + i);
 	}
-	glDrawBuffers(3, attachments.data());
+	glDrawBuffers(buffers.buffers.size(), attachments.data());
 }
 
 static void createBuffer(int width, int height, vector<unsigned int> &buffers, unsigned int channel_type, unsigned int channels, unsigned int type)
