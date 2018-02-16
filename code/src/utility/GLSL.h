@@ -9,7 +9,8 @@
 #ifndef __GLSL__
 #define __GLSL__
 
-#include <glad/glad.h>
+#define GLEW_STATIC
+#include <GL/glew.h>
 
 ///////////////////////////////////////////////////////////////////////////////
 // For printing out the current file and line number                         //

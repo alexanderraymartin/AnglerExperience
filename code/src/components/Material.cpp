@@ -4,7 +4,8 @@
 #include <array>
 #include <iostream>
 
-#include <glad/glad.h>
+#define GLEW_STATIC
+#include <GL/glew.h>
 
 #include <glm/gtc/type_ptr.hpp>
 

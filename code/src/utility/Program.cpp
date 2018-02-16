@@ -105,7 +105,7 @@ static map<string, GLenum> typemap = {
   {"vertex", GL_VERTEX_SHADER},
   {"fragment", GL_FRAGMENT_SHADER},
   {"geometry", GL_GEOMETRY_SHADER},
-  {"compute", 0}
+  {"compute", GL_COMPUTE_SHADER}
 };
 bool Program::buildFromJsonArray(const json &program_obj){
   vector<GLuint> component_shaders;

@@ -2,8 +2,8 @@
 #ifndef TIMELINE_H_
 #define TIMELINE_H_
 
-#include <glad/glad.h>
-
+#define GLEW_STATIC
+#include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
 #include "common.h"

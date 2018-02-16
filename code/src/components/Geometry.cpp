@@ -2,7 +2,8 @@
 #include <iostream>
 #include <assert.h>
 
-#include <glad/glad.h>
+#define GLEW_STATIC
+#include <GL/glew.h>
 
 #include <tiny_obj_loader.h>
 
