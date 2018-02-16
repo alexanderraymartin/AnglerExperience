@@ -51,12 +51,12 @@ function(BuildProperties TargetName)
   target_link_libraries(${TargetName} glfw ${GLFW_LIBRARIES})
 
   # Get the GLEW environment variable.
-  target_include_directories(${TargetName} PUBLIC  ${GLEW_DIR}/include)
-  if(WIN32)
-    target_link_libraries(${TargetName} ${GLEW_DIR}/lib/Release/Win32/glew32s.lib)
-  else()
-    target_link_libraries(${TargetName} ${GLEW_DIR}/lib/libGLEW.a)
-  endif()
+  # target_include_directories(${TargetName} PUBLIC  ${GLEW_DIR}/include)
+  # if(WIN32)
+  #   target_link_libraries(${TargetName} ${GLEW_DIR}/lib/Release/Win32/glew32s.lib)
+  # else()
+  #   target_link_libraries(${TargetName} ${GLEW_DIR}/lib/libGLEW.a)
+  # endif()
 
   target_link_libraries(${TargetName} gladTarget)
   target_include_directories(${TargetName} PUBLIC "${GLAD_DIR}/include")
@@ -90,11 +90,11 @@ endfunction(BuildProperties)
 
 # HERE begins the actual main CMake setup
 
+add_subdirectory("${GLAD_DIR}/src")
+
 add_subdirectory("src/utility")
 
 add_subdirectory("libs/TinyObj")
-
-add_subdirectory("${GLAD_DIR}/src")
 
 file(GLOB SOURCES "src/*.cpp" "src/components/*.cpp")
 
