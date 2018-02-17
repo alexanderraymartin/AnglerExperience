@@ -43,3 +43,6 @@ CTestTestfile.cmake
 
 # Other
 build
+
+#MacOS
+.DS_Store

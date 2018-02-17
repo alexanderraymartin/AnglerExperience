@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <iostream>
 #include <fstream>
+#include <limits>
 #define _USE_MATH_DEFINES
 #include <cmath>
 
@@ -11,6 +12,8 @@
 
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/quaternion.hpp>
 
 #include <json.hpp>
 
@@ -139,6 +142,8 @@ static void initGL(){
 
   GLSL::checkVersion();
   glEnable(GL_DEPTH_TEST);
+  glEnable(GL_CULL_FACE);
+  glFrontFace(GL_CCW);
   glClearColor(0.0, 0.0, 0.0, 1.0);
 }
 
@@ -204,6 +209,7 @@ static void initShaders(ApplicationState &appstate){
   shaderfile >> shaderjson;
   for(json &j : shaderjson["pairs"]){
     appstate.resources.shaderlib.add(j[0]["basename"].get<string>(), new Program(j));
+    cout << "Loaded shader: " << j[0]["basename"].get<string>() << endl;
   }
 
   // TODO: Iterate through given shader source files, compile them, and store the in the shaderlib.
@@ -215,16 +221,23 @@ static void initPrimitives(TopLevelResources &resources){
 }
 
 static void initScene(ApplicationState &appstate, GameState &gstate){
-  StaticCamera* scenecam = new StaticCamera(45.0, glm::vec3(0.0), glm::vec3(0.0, 0.0, 3.0));
+  StaticCamera* scenecam = new StaticCamera(37.5, glm::vec3(0.0, 3.4, 0.0), glm::vec3(0.0, 3.1, 3.0));
   gstate.activeScene = new Scene(scenecam);
 
-  Entity* light;
+  Entity* sun;
   {
-    light = new Entity();
-    light->attach(new SunLight(
+    sun = new Entity();
+    sun->attach(new SunLight(
       glm::vec3(.7, .7, .65),
       glm::vec3(0.5, -1.0, 1.0))
     );
+  }
+
+  Entity* pointlight;
+  {
+    pointlight = new Entity();
+    pointlight->attach(new PointLight(glm::vec3(.2), 1.0, 15.0));
+    pointlight->attach(new Pose(glm::vec3(-1.5, 0.5, 1.0)));
   }
 
   Entity* cube;
@@ -239,13 +252,16 @@ static void initScene(ApplicationState &appstate, GameState &gstate){
     SolidMesh* mesh = new SolidMesh(cubegeo);
     mesh->setMaterial(mat);
 
+    Pose* pose = new Pose(glm::vec3(0.0906, -0.31318, 48.0));
+    pose->orient = glm::angleAxis(glm::radians(4.92f), glm::vec3(.793, -.051, .607));
+    pose->scale = glm::vec3(45.0, .05, 48.0);
     cube->attach(mesh);
-    cube->attach(new Pose(glm::vec3(0.0, 0.0, 6.0)));
-    cube->attach(new LinearRotationAnim(glm::vec3(0.0,1.0,0.0), .75));
+    cube->attach(pose);
   }
 
   gstate.activeScene->addEntity(cube);
-  gstate.activeScene->addEntity(light);
+  gstate.activeScene->addEntity(sun);
+  gstate.activeScene->addEntity(pointlight);
 }
 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=

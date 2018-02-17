@@ -154,7 +154,7 @@ bool Program::buildFromJsonArray(const json &program_obj){
   GLSL::checkError(GET_FILE_LINE);
 
   // Put uniform and attribute locations into the map now instead of later
-  for(auto &attr : prog_attributes){
+  /*for(auto &attr : prog_attributes){
     GLint id = GLSL::getAttribLocation(pid, attr, verbose);
     if(id < 0 && verbose){
       fprintf(stderr, "Attribute %s could not be found!\n", attr);
@@ -169,7 +169,7 @@ bool Program::buildFromJsonArray(const json &program_obj){
     }else if(id >= 0){
       uniforms[unif] = id;
     }
-  }
+  }*/
 
   return(true);
 }

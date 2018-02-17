@@ -24,10 +24,10 @@
         0.400000005960464
       ]
     ],
-    "shine": [
+    "matShine": [
       15,
       9.0
     ]
   },
-  "shader": "blinn-phong"
+  "shader": "deferred-export"
 }
