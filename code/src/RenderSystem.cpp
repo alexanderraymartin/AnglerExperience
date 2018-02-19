@@ -70,10 +70,11 @@ void RenderSystem::render(ApplicationState &appstate, GameState &gstate, double 
   {
 	  glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	  shaderlib->makeActive("passthru");
+	  shaderlib->makeActive("FXAA");
 	  glActiveTexture(GL_TEXTURE0);
 	  glBindTexture(GL_TEXTURE_2D, render_out_color);
 	  glUniform1i(shaderlib->getActive().getUniform("pixtex"), 0);
+	  glUniform2f(shaderlib->getActive().getUniform("resolution"), static_cast<float>(w_width), static_cast<float>(w_height));
 	  glBindVertexArray(quadVAO);
 	  glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 	  glBindVertexArray(0);
@@ -315,8 +316,8 @@ static void initOutputFBO(GLuint* render_out_FBO, GLuint* render_out_color, int 
 	glGenTextures(1, render_out_color);
 	glBindTexture(GL_TEXTURE_2D, *render_out_color);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w_width, w_height, 0, GL_RGBA, GL_UNSIGNED_INT, NULL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, *render_out_color, 0);
 	glDrawBuffer(GL_COLOR_ATTACHMENT0);
 

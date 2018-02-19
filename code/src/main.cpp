@@ -37,7 +37,7 @@
 
 using namespace std;
 
-#define FORCEWINDOW
+// #define FORCEWINDOW
 
 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -48,7 +48,6 @@ static void initGL();
 static void initLibs(TopLevelResources &resources);
 static void initGLFW(ApplicationState &appstate);
 static void initShaders(ApplicationState &appstate);
-static void initPrimitives(TopLevelResources &resources);
 static void initScene(ApplicationState &appstate, GameState &gstate);
 
 static GLFWmonitor* autoDetectScreen(UINT* width, UINT* height);
@@ -75,7 +74,6 @@ int main(int argc, char** argv){
   initLibs(appstate.resources); // Can be split up in needed
   initGL();
   initShaders(appstate);
-  initPrimitives(appstate.resources);
 
   initScene(appstate, gstate);
 
@@ -218,12 +216,9 @@ static void initShaders(ApplicationState &appstate){
     cout << "Loaded shader: " << j[0]["basename"].get<string>() << endl;
   }
 
-  // TODO: Iterate through given shader source files, compile them, and store the in the shaderlib.
-  // Note: To prevent this from being ungodly long due to the nature of Zoe's Program class we should 
-  // probably set up some kind of alternative for adding all the uniforms and attributes. JSON loader? 
-}
-static void initPrimitives(TopLevelResources &resources){
-  // TODO: Load some primitive geometry into appropriate OpenGL buffers. (quads, tris, cube, sphere, ect...)
+  json FXAAjson = { shaderjson["all"]["vert_passthru"], shaderjson["all"]["frag_FXAA"] };
+  Program* FXAAprog = new Program(FXAAjson);
+  appstate.resources.shaderlib.add("FXAA", FXAAprog);
 }
 
 static void initScene(ApplicationState &appstate, GameState &gstate){
