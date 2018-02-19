@@ -28,7 +28,8 @@ namespace RenderSystem{
 	static GLuint quadVAO;
 	static GLuint quadVBO;
 
-	static GLuint deferred_fbo;
+	static GLuint render_out_FBO;
+	static GLuint render_out_color;
 	static Program* deferred_export = NULL;
 	static Program* deferred_uber = NULL;
 
