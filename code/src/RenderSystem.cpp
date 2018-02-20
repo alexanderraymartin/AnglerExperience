@@ -141,24 +141,28 @@ void RenderSystem::drawEntities(Scene* scene){
   }
 }
 
-void RenderSystem::drawEntity(const Entity* entity){
+void RenderSystem::drawEntity(const Entity* entity) {
   SolidMesh* mesh = NULL;
   Pose* pose = NULL;
-  for(Component *cmpnt : entity->components){
+  for (Component *cmpnt : entity->components) {
     GATHER_SINGLE_COMPONENT(mesh, SolidMesh*, cmpnt);
     GATHER_SINGLE_COMPONENT(pose, Pose*, cmpnt);
-    
-    if(mesh && pose){
+
+    if (mesh && pose) {
+      MVP.M.pushMatrix();
       MVP.M.multMatrix(pose->getAffineMatrix());
-      for(Geometry &geo : mesh->geometries){
+      for (Geometry &geo : mesh->geometries) {
         shaderlib->fastActivate(deferred_export);
         drawGeometry(geo, MVP, deferred_export);
       }
+      MVP.M.popMatrix();
+      mesh = NULL;
+      pose = NULL;
       return;
     }
   }
-  if(mesh){
-    for(Geometry &geo : mesh->geometries){
+  if (mesh) {
+    for (Geometry &geo : mesh->geometries) {
       shaderlib->fastActivate(deferred_export);
       drawGeometry(geo, MVP, deferred_export);
     }
