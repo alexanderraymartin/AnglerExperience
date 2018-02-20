@@ -128,6 +128,8 @@ void RenderSystem::onResize(GLFWwindow *window, int width, int height){
   w_width = width;
   w_height = height;
   glViewport(0, 0, width, height);
+
+  initBuffers(w_width, w_height, deferred_buffers);
 }
 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
