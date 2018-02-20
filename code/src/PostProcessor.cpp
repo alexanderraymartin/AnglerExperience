@@ -95,6 +95,9 @@ void PostProcessor::applyCombine(GLuint colorTex, GLuint brightTex)
 
 void PostProcessor::processBloom(GLuint texture)
 {
+	// Bind the vertex array
+	glBindVertexArray(quad_VertexArrayID);
+
 	// Bright filter
 	glBindFramebuffer(GL_FRAMEBUFFER, frameBuf[0]);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
