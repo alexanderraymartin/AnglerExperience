@@ -37,6 +37,8 @@
 
 using namespace std;
 
+#define FORCEWINDOW
+
 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
         // Forward Declarations
@@ -176,6 +178,10 @@ static void initGLFW(ApplicationState &appstate){
   UINT w_height = 480;
 
   GLFWmonitor* monitor = autoDetectScreen(&w_width, &w_height);
+
+#ifdef FORCEWINDOW
+  monitor = NULL;
+#endif
 
   fprintf(stderr, "Auto-selected %ux%u %s for screen config\n",
     w_width,
