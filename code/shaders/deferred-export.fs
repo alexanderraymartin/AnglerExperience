@@ -1,16 +1,17 @@
 #version 330 core
 layout (location = 0) out vec3 gPosition;
 layout (location = 1) out vec3 gNormal;
-layout (location = 2) out vec4 gAlbedoSpec;
+layout (location = 2) out vec4 gAlbedo;
+layout (location = 3) out vec4 gSpecular;
 
 
 //uniform sampler2D texture_diffuse;
 //uniform sampler2D texture_specular;
 
-uniform vec3 uMatAmb;
-uniform vec3 uMatDif;
-uniform vec3 uMatSpec;
-uniform float uShine;
+uniform vec3 matAmb;
+uniform vec3 matDif;
+uniform vec3 matSpec;
+uniform float matShine;
 
 in vec3 fragNor;
 in vec3 fragPos;
@@ -24,12 +25,10 @@ void main()
 	gPosition = fragPos;
 
 //If material, use this
-	gAlbedoSpec.rgb = uMatDif;
-	gAlbedoSpec.a = uShine;
-
-	//gl_FragData[0] = gPosition;
-	//gl_FragData[1] = gNormal;
-	//gl_FragData[2] = gAlbedoSpec;
+	gAlbedo.rgb = matDif;
+	gAlbedo.a = length(matAmb);
+	gSpecular.rgb = matSpec;
+	gSpecular.a = matShine;
 
 //If texture, use this
 	//gather the color values from textures, diffuse as an RGB value, and specular as an intensity

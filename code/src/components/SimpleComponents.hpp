@@ -54,7 +54,7 @@ class Camera : public Component{
 class StaticCamera : public Camera{
  public:
   StaticCamera() : fov(45.0), near(.01), far(100.0), pose(glm::vec3(0.0)), lookat(glm::vec3(0.0)), updir(glm::vec3(0.0, 1.0, 0.0)){}
-  StaticCamera(double fov, const glm::vec3 &loc, const glm::vec3 &look) : fov(fov), near(.01), far(100.0), pose(loc), lookat(look), updir(glm::vec3(0.0, 1.0, 0.0)){}
+  StaticCamera(double fov, const glm::vec3 &loc, const glm::vec3 &look) : fov(fov), near(.01), far(100.0), pose(loc), lookat(look), updir(glm::vec3(0.0, -1.0, 0.0)){}
 
   glm::vec3 getViewDir(){return(lookat-pose.loc);}
 
