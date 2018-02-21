@@ -63,11 +63,6 @@ void RenderSystem::init(ApplicationState &appstate) {
 
 	glBindFramebuffer(GL_FRAMEBUFFER, deferred_fbo);
 
-	shaderlib->fastActivate(deferred_uber);
-	glUniform1i(deferred_uber->getUniform("gPosition"), 0);
-	glUniform1i(deferred_uber->getUniform("gNormal"), 1);
-	glUniform1i(deferred_uber->getUniform("gAlbedoSpec"), 2);
-
 	initQuad(quadVAO, quadVBO);
 	initCaustics();
 	postProcessor = new PostProcessor(appstate.window);
