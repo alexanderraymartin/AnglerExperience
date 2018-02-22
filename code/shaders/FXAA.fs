@@ -6,7 +6,7 @@
 
 #define FXAA_EDGE_THRESH (1.0/8.0)
 #define FXAA_EDGE_THRESH_MIN (1.0/16.0)
-#define FXAA_SUBPIXEL_QUALITY 0.75
+#define FXAA_SUBPIXEL_QUALITY .75
 #define FXAA_SEARCH_ITERATIONS 12
 
 #define NORTH vec2(0.0, pixsize.y)
@@ -25,6 +25,8 @@ out vec4 FragColor;
 
 uniform sampler2D pixtex;
 uniform vec2 resolution;
+uniform bool showEdges;
+uniform bool useFXAA;
 
 float luma(in vec3 rgb){
 	rgb = vec3(0.2126,0.7152, 0.0722)*rgb;
@@ -62,7 +64,7 @@ void main()
 	float rangeMax = max(lumaC, max(max(lumaN, lumaW), max(lumaS, lumaE)));
 
 	float range = rangeMax - rangeMin;
-	if( true || range < max(FXAA_EDGE_THRESH_MIN, rangeMax * FXAA_EDGE_THRESH)){
+	if( range < max(FXAA_EDGE_THRESH_MIN, rangeMax * FXAA_EDGE_THRESH)){
 		FragColor = vec4(rgbC, 1.0);
 		return;
 	}
@@ -78,34 +80,30 @@ void main()
 		abs((0.50 * lumaN ) + (-1.0 * lumaC) + (0.50 * lumaS )) +
 		abs((0.25 * lumaNE) + (-0.5 * lumaE) + (0.25 * lumaSE));
 	bool horzSpan = edgeHorz >= edgeVert;
+	float horzSpanf = step(edgeVert, edgeHorz);
 
-	float luma1 = (horzSpan ? lumaS : lumaW);
-	float luma2 = (horzSpan ? lumaN : lumaE);
-	float gradientSorW = luma1 - lumaC;
-	float gradientNorE = luma2 - lumaC; 
-
-	bool steepest = abs(gradientSorW) >= abs(gradientNorE);
-
-	float gradientScaled = .25*max(abs(gradientSorW), abs(gradientNorE));
-
-	float stepLen = horzSpan ? pixsize.y : pixsize.x;
-	float lumaLocal = 0.0;
-
-	if(steepest){
-		stepLen = -stepLen;
-		lumaLocal = .5*(luma1 + lumaC);
-	}else{
-		lumaLocal = .5*(luma2 + lumaC);
+	if(showEdges){
+		FragColor = vec4(( horzSpan ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0) ) , 1.0);
+		return;
 	}
 
-	vec2 subPixCoord = norm_dev_cord;
-	if(horzSpan){
-		subPixCoord.y += stepLen * .5;
-	}else{
-		subPixCoord.x += stepLen *.5;
-	}
+	float negLuma = (horzSpan ? lumaS : lumaW);
+	float posLuma = (horzSpan ? lumaN : lumaE);
+	float negGradient = negLuma - lumaC;
+	float posGradient = posLuma - lumaC; 
 
-	vec2 searchOffset = horzSpan ? WEST : NORTH;
+	float posOverNeg = step(abs(negGradient), abs(posGradient));
+
+	float gradientScaled = .25*max(abs(negGradient), abs(posGradient));
+
+	float stepLen = (horzSpan ? pixsize.y : pixsize.x) * -1*INV(posOverNeg);
+	
+	float lumaLocal = .5*(posOverNeg*posLuma + INV(posOverNeg)*negLuma + lumaC);
+
+
+	vec2 subPixCoord = norm_dev_cord + (stepLen * .5) * mix(vec2(1.0, 0.0), vec2(0.0, 1.0), horzSpanf);
+
+	vec2 searchOffset = INV(horzSpanf)*NORTH + horzSpanf*EAST;
 	vec2 posSearch = subPixCoord + searchOffset;
 	vec2 negSearch = subPixCoord - searchOffset;
 
@@ -119,12 +117,13 @@ void main()
 	if(!posCap || !negCap){
 		for(int i = 1; i < FXAA_SEARCH_ITERATIONS; i++){
 
-			float posLumaEnd = luma(texture(pixtex, posSearch).rgb) - lumaLocal;
-			float negLumaEnd = luma(texture(pixtex, negSearch).rgb) - lumaLocal;
+			posLumaEnd = luma(texture(pixtex, posSearch).rgb) - lumaLocal;
+			negLumaEnd = luma(texture(pixtex, negSearch).rgb) - lumaLocal;
 
 			posCap = abs(posLumaEnd) >= gradientScaled;
 			negCap = abs(negLumaEnd) >= gradientScaled;
 
+			if(posCap && negCap){break;}
 
 			if(!posCap){
 				posSearch += searchOffset;
@@ -133,8 +132,6 @@ void main()
 			if(!negCap){
 				negSearch -= searchOffset; 
 			}
-
-			if(posCap && negCap){break;}
 		}
 	}
 
@@ -158,12 +155,12 @@ void main()
 
 	float finalOffset = max(edgePixelOffset*correctVariation, subPixelOffsetFinal);
 
-	vec2 finalCoord;
+	vec2 finalCoord = norm_dev_cord;
 	if(horzSpan){
 		finalCoord.y = norm_dev_cord.y + finalOffset * stepLen;
 	}else{
 		finalCoord.x = norm_dev_cord.x + finalOffset * stepLen;
 	}
 
-	FragColor = texture(pixtex, finalCoord);
+	FragColor = texture(pixtex, useFXAA ? finalCoord : norm_dev_cord);
 }

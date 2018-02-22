@@ -47,6 +47,7 @@ class Material : public Component{
 
   void setIntProp(const string &keyword, int prop);
   void setFloatProp(const string &keyword, float prop);
+  void setBoolProp(const string &keyword, bool prop);
   void setVec2Prop(const string &keyword,const vec2 &prop);
   void setVec3Prop(const string &keyword,const vec3 &prop);
   void setVec4Prop(const string &keyword,const vec4 &prop);
@@ -78,6 +79,7 @@ class Material : public Component{
   enum TypeEnum{
     Prop_Type_Int = 1,
     Prop_Type_Float = 0x0F, // 15
+    Prop_Type_Bool = 0x0B,
     Prop_Type_Vec2 = 0x02,  // 2
     Prop_Type_Vec3 = 0x03,  // 3
     Prop_Type_Vec4 = 0x04,  // 4

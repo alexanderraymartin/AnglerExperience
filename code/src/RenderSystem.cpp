@@ -75,7 +75,9 @@ void RenderSystem::render(ApplicationState &appstate, GameState &gstate, double 
 	  glBindTexture(GL_TEXTURE_2D, render_out_color);
 	  glUniform1i(shaderlib->getActive().getUniform("pixtex"), 0);
 	  glUniform2f(shaderlib->getActive().getUniform("resolution"), static_cast<float>(w_width), static_cast<float>(w_height));
-	  glBindVertexArray(quadVAO);
+	  glUniform1i(shaderlib->getActive().getUniform("showEdges"), glfwGetKey(appstate.window, GLFW_KEY_L) == GLFW_PRESS);
+    glUniform1i(shaderlib->getActive().getUniform("useFXAA"), glfwGetKey(appstate.window, GLFW_KEY_SPACE) == GLFW_PRESS);
+    glBindVertexArray(quadVAO);
 	  glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 	  glBindVertexArray(0);
 	  ASSERT_NO_GLERR();

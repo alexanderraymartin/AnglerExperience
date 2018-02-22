@@ -67,7 +67,7 @@ void main()
     vec4 depthCoord = depthB * depthP * depthV * texture(gPosition, TexCoords);
     vec4 caustColor = texture(caustic, depthCoord.xy) * INV(BackMask);
 
-    lighting = mix(lighting, lighting*caustColor.rgb, caustColor.a) * INV(BackMask);
+    //lighting = mix(lighting, lighting*caustColor.rgb, caustColor.a) * INV(BackMask);
 
     lighting = mix(lighting, BACKGROUND, BackMask);
     
