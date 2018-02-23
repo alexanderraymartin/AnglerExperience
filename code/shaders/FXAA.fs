@@ -5,9 +5,9 @@
 #version 330 core
 
 #define FXAA_EDGE_THRESH (1.0/8.0)
-#define FXAA_EDGE_THRESH_MIN (1.0/16.0)
+#define FXAA_EDGE_THRESH_MIN (1.0/32.0)
 #define FXAA_SUBPIXEL_QUALITY .75
-#define FXAA_SEARCH_ITERATIONS 12
+#define FXAA_SEARCH_ITERATIONS 16
 
 #define NORTH vec2(0.0, pixsize.y)
 #define SOUTH vec2(0.0, -pixsize.y)
@@ -26,6 +26,7 @@ out vec4 FragColor;
 uniform sampler2D pixtex;
 uniform vec2 resolution;
 uniform bool showEdges;
+uniform bool shadeEPO;
 uniform bool useFXAA;
 
 float luma(in vec3 rgb){
@@ -79,7 +80,7 @@ void main()
 		abs((0.25 * lumaNW) + (-0.5 * lumaW) + (0.25 * lumaSW)) +
 		abs((0.50 * lumaN ) + (-1.0 * lumaC) + (0.50 * lumaS )) +
 		abs((0.25 * lumaNE) + (-0.5 * lumaE) + (0.25 * lumaSE));
-	bool horzSpan = edgeHorz >= edgeVert;
+	bool horzSpan = edgeHorz >= edgeVert; 
 	float horzSpanf = step(edgeVert, edgeHorz);
 
 	if(showEdges){
@@ -96,16 +97,16 @@ void main()
 
 	float gradientScaled = .25*max(abs(negGradient), abs(posGradient));
 
-	float stepLen = (horzSpan ? pixsize.y : pixsize.x) * -1*INV(posOverNeg);
+	float stepLen = (horzSpan ? pixsize.y : pixsize.x) * -INV(posOverNeg);
 	
 	float lumaLocal = .5*(posOverNeg*posLuma + INV(posOverNeg)*negLuma + lumaC);
 
 
-	vec2 subPixCoord = norm_dev_cord + (stepLen * .5) * mix(vec2(1.0, 0.0), vec2(0.0, 1.0), horzSpanf);
+	vec2 searchCoord = norm_dev_cord + ((stepLen * .5) * mix(vec2(1.0, 0.0), vec2(0.0, 1.0), horzSpanf));
 
 	vec2 searchOffset = INV(horzSpanf)*NORTH + horzSpanf*EAST;
-	vec2 posSearch = subPixCoord + searchOffset;
-	vec2 negSearch = subPixCoord - searchOffset;
+	vec2 posSearch = searchCoord + searchOffset;
+	vec2 negSearch = searchCoord - searchOffset;
 
 	float posLumaEnd = luma(texture(pixtex, posSearch).rgb) - lumaLocal;
 	float negLumaEnd = luma(texture(pixtex, negSearch).rgb) - lumaLocal;
@@ -142,7 +143,12 @@ void main()
 	float distanceFinal = min(negDistance, posDistance);
 
 	float edgeThickness = (posDistance + negDistance);
-	float edgePixelOffset = -distanceFinal / edgeThickness + .5;
+	float edgePixelOffset = (-distanceFinal / edgeThickness + .5) * 1.8;
+
+	if(shadeEPO){
+		FragColor = vec4(vec3(edgePixelOffset),1.0);
+		return;
+	}
 
 	// Detect overshooting during search. 1.0 if correct 0.0 otherwise
 	float correctVariation = abs(step(negLumaEnd*biasNeg + posLumaEnd*INV(biasNeg), 0.0) - step(lumaC, lumaLocal));

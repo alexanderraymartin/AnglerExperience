@@ -279,13 +279,35 @@ static void initScene(ApplicationState &appstate, GameState &gstate){
     pose->scale = glm::vec3(.35);
     cube->attach(mesh);
     cube->attach(pose);
-    // cube->attach(new LinearRotationAnim(glm::vec3(0.0, 1.0, 0.0)));
+    cube->attach(new LinearRotationAnim(glm::vec3(0.0, 0.0, 0.05)));
+  }
+
+    Entity* cube2;
+  {
+    cube2 = new Entity();
+
+    Material mat(appstate.resources.shaderlib.getPtr("deferred-export"));
+    mat.setVec3Prop("matAmb", glm::vec3(.4));
+    mat.setVec3Prop("matDif", glm::vec3(.3));
+    mat.setVec3Prop("matSpec", glm::vec3(.1));
+
+    vector<Geometry> cubegeo;
+    Geometry::loadFullObj( "" STRIFY(ASSET_DIR) "/cube.obj", cubegeo);
+
+    SolidMesh* mesh = new SolidMesh(cubegeo);
+    mesh->setMaterial(mat);
+
+    Pose* pose = new Pose(glm::vec3(2.0, 2.7, 16.0));
+    pose->scale = glm::vec3(.25);
+    cube2->attach(mesh);
+    cube2->attach(pose);
   }
 
   gstate.activeScene->addEntity(groundplane);
   gstate.activeScene->addEntity(sun);
   gstate.activeScene->addEntity(pointlight);
   gstate.activeScene->addEntity(cube);
+  gstate.activeScene->addEntity(cube2);
 }
 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
