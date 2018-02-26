@@ -12,6 +12,7 @@ uniform float interp;
 out vec3 fragNor;
 out vec3 fragView;
 out vec3 fragPos;
+out float vertID;
 
 void main()
 {
@@ -22,5 +23,5 @@ void main()
 	fragNor = (transpose(inverse(M)) * vec4(nor, 0.0)).xyz;
 	fragView = -(V * M * pos).xyz;
 	fragPos = (M * pos).xyz;
-
+	vertID = gl_VertexID;
 }

@@ -5,6 +5,8 @@ in vec3 fragNor;
 in vec3 fragView;
 in vec3 fragPos;
 
+in float vertID;
+
 uniform vec3 sunDir;
 uniform vec3 sunCol; 
 
@@ -17,6 +19,7 @@ out vec4 color;
 
 void main()
 {
+	int vertid = int(floor(vertID));
 	vec3 nfragNor = normalize(fragNor);
 
 	vec3 fragLum = matAmb; //Ambient done outside of loop
@@ -35,4 +38,13 @@ void main()
 	
 	vec3 col = fragLum;
 	color = vec4(col, 1.0);
+
+	/* Test vertex switching by coloring based on vertex ID */
+	if (vertid % 3 == 0) {
+		color = vec4(vertID / 1.0, 0.0, 0.0, 1.0);
+	} else if (vertid % 3 == 1) {
+		color = vec4(0.0, vertID / 1.0, 0.0, 1.0);
+	} else {
+		color = vec4(0.0, 0.0, vertID / 1.0, 1.0);
+	}
 }
