@@ -10,7 +10,7 @@ class PostProcessor
 {
 public:
 	PostProcessor(GLFWwindow* window);
-	void doPostProcessing(GLuint texture);
+	void doPostProcessing(GLuint texture, GLuint output);
 	void toggleBloom();
 	bool hasBloom();
 	void resize();
@@ -22,7 +22,7 @@ private:
 	void applyHBlur(GLuint brightTex);
 	void applyVBlur(GLuint brightTex);
 	void applyCombine(GLuint colorTex, GLuint brightTex);
-	void processBloom(GLuint texture);
+	void processBloom(GLuint texture, GLuint output);
 	/***************************************/
 
 	void init();

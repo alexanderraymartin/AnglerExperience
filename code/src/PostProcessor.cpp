@@ -7,11 +7,11 @@ PostProcessor::PostProcessor(GLFWwindow* window)
 	init();
 }
 
-void PostProcessor::doPostProcessing(GLuint texture)
+void PostProcessor::doPostProcessing(GLuint texture, GLuint output)
 {
 	if (hasBloom()) 
 	{
-		processBloom(texture);
+		processBloom(texture, output);
 	}
 }
 
@@ -93,7 +93,7 @@ void PostProcessor::applyCombine(GLuint colorTex, GLuint brightTex)
 	combineProg->unbind();
 }
 
-void PostProcessor::processBloom(GLuint texture)
+void PostProcessor::processBloom(GLuint texture, GLuint output)
 {
 	// Bind the vertex array
 	glBindVertexArray(quad_VertexArrayID);
@@ -114,7 +114,7 @@ void PostProcessor::processBloom(GLuint texture)
 	applyVBlur(texBuf[1]);
 
 	// Combine
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glBindFramebuffer(GL_FRAMEBUFFER, output);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	applyCombine(texture, texBuf[0]);
 }
