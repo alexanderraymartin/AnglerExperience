@@ -69,6 +69,18 @@ void main()
     lighting = mix(lighting, lighting*caustColor.rgb, caustColor.a) * INV(BackMask);
 
     lighting = mix(lighting, BACKGROUND, BackMask);
+
+    // implement fog
+    float linearDepth = depthCoord.z;
+    float fogEnd = 0;
+    float fogStart = -1;
+    float fog = 1.0 - clamp((fogEnd - linearDepth)/(fogEnd - fogStart), 0.0, 1.0);
+    linearDepth = depthCoord.y;
+    fogStart = 2;
+    if (fog > 0.0) {
+       fog = fog - clamp((fogEnd - linearDepth)/(fogEnd - fogStart), 0.0, fog);
+    }
     
+    lighting = mix (lighting, vec3(0.7), fog);
     FragColor = vec4(lighting, 1.0);
 }
