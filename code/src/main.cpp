@@ -217,8 +217,11 @@ static void initShaders(ApplicationState &appstate){
   }
 
   json FXAAjson = { shaderjson["all"]["vert_passthru"], shaderjson["all"]["frag_FXAA"] };
+  json zoomjson = { shaderjson["all"]["vert_passthru"], shaderjson["all"]["frag_zoom"] };
+  Program* zoomprog = new Program(zoomjson);
   Program* FXAAprog = new Program(FXAAjson);
   appstate.resources.shaderlib.add("FXAA", FXAAprog);
+  appstate.resources.shaderlib.add("zoom_tool", zoomprog);
 }
 
 static void initScene(ApplicationState &appstate, GameState &gstate){

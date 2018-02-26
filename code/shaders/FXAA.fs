@@ -7,7 +7,7 @@
 #define FXAA_EDGE_THRESH (1.0/8.0)
 #define FXAA_EDGE_THRESH_MIN (1.0/32.0)
 #define FXAA_SUBPIXEL_QUALITY .75
-#define FXAA_SEARCH_ITERATIONS 16
+#define FXAA_SEARCH_ITERATIONS 128
 
 #define NORTH vec2(0.0, pixsize.y)
 #define SOUTH vec2(0.0, -pixsize.y)
@@ -26,12 +26,12 @@ out vec4 FragColor;
 uniform sampler2D pixtex;
 uniform vec2 resolution;
 uniform bool showEdges;
+uniform bool showPosNeg;
 uniform bool shadeEPO;
 uniform bool useFXAA;
 
 float luma(in vec3 rgb){
-	rgb = vec3(0.2126,0.7152, 0.0722)*rgb;
-    return(rgb.r+rgb.g+rgb.b);
+    return(sqrt(dot(rgb, vec3(0.2126,0.7152, 0.0722))));
 }
 
 void main()
@@ -42,24 +42,16 @@ void main()
 	vec3 image = fullimage.rgb;
 
 	vec3 rgbC  = texture2D(pixtex, norm_dev_cord).rgb; // Center
-	vec3 rgbN  = texture2D(pixtex, norm_dev_cord+NORTH).rgb;
-	vec3 rgbS  = texture2D(pixtex, norm_dev_cord+SOUTH).rgb;
-	vec3 rgbE  = texture2D(pixtex, norm_dev_cord+EAST).rgb;
-	vec3 rgbW  = texture2D(pixtex, norm_dev_cord+WEST).rgb;
-	vec3 rgbNE = texture2D(pixtex, norm_dev_cord+NORTHEAST).rgb;
-	vec3 rgbNW = texture2D(pixtex, norm_dev_cord+NORTHWEST).rgb;
-	vec3 rgbSE = texture2D(pixtex, norm_dev_cord+SOUTHEAST).rgb;
-	vec3 rgbSW = texture2D(pixtex, norm_dev_cord+SOUTHWEST).rgb;
 
 	float lumaC  = luma(rgbC);
-	float lumaN  = luma(rgbN);
-	float lumaS  = luma(rgbS);
-	float lumaE  = luma(rgbE);
-	float lumaW  = luma(rgbW);
-	float lumaNE = luma(rgbNE);
-	float lumaNW = luma(rgbNW);
-	float lumaSE = luma(rgbSE);
-	float lumaSW = luma(rgbSW);
+	float lumaN  = luma(texture2D(pixtex, norm_dev_cord+NORTH).rgb);
+	float lumaS  = luma(texture2D(pixtex, norm_dev_cord+SOUTH).rgb);
+	float lumaE  = luma(texture2D(pixtex, norm_dev_cord+EAST).rgb);
+	float lumaW  = luma(texture2D(pixtex, norm_dev_cord+WEST).rgb);
+	float lumaNE = luma(texture2D(pixtex, norm_dev_cord+NORTHEAST).rgb);
+	float lumaNW = luma(texture2D(pixtex, norm_dev_cord+NORTHWEST).rgb);
+	float lumaSE = luma(texture2D(pixtex, norm_dev_cord+SOUTHEAST).rgb);
+	float lumaSW = luma(texture2D(pixtex, norm_dev_cord+SOUTHWEST).rgb);
 
 	float rangeMin = min(lumaC, min(min(lumaN, lumaW), min(lumaS, lumaE)));
 	float rangeMax = max(lumaC, max(max(lumaN, lumaW), max(lumaS, lumaE)));
@@ -70,7 +62,6 @@ void main()
 		return;
 	}
 
-	vec3 rgbL = (rgbN + rgbW + rgbC + rgbE + rgbS + rgbNW + rgbNE + rgbSW + rgbSE) / 9.0;
 
 	float edgeVert =
 		abs((0.25 * lumaNW) + (-0.5 * lumaN) + (0.25 * lumaNE)) +
@@ -93,14 +84,18 @@ void main()
 	float negGradient = negLuma - lumaC;
 	float posGradient = posLuma - lumaC; 
 
-	float posOverNeg = step(abs(negGradient), abs(posGradient));
+	float isNegative = step(abs(negGradient), abs(posGradient));
+
+	if(showPosNeg){
+		FragColor = vec4(vec3(isNegative), 1.0);
+		return;
+	}
 
 	float gradientScaled = .25*max(abs(negGradient), abs(posGradient));
 
-	float stepLen = (horzSpan ? pixsize.y : pixsize.x) * -INV(posOverNeg);
+	float stepLen = (horzSpan ? pixsize.y : pixsize.x) * -INV(isNegative);
 	
-	float lumaLocal = .5*(posOverNeg*posLuma + INV(posOverNeg)*negLuma + lumaC);
-
+	float lumaLocal = .5*(isNegative*posLuma + INV(isNegative)*negLuma + lumaC);
 
 	vec2 searchCoord = norm_dev_cord + ((stepLen * .5) * mix(vec2(1.0, 0.0), vec2(0.0, 1.0), horzSpanf));
 
@@ -134,6 +129,9 @@ void main()
 				negSearch -= searchOffset; 
 			}
 		}
+	}else{
+		FragColor = vec4(vec3(1.0, isNegative, 0.0), 1.0);
+		if(!useFXAA) return;
 	}
 
 	float posDistance = horzSpan ? (posSearch.x - norm_dev_cord.x) : (posSearch.y - norm_dev_cord.y);
@@ -142,11 +140,13 @@ void main()
 	float biasNeg = step(negDistance, posDistance);
 	float distanceFinal = min(negDistance, posDistance);
 
-	float edgeThickness = (posDistance + negDistance);
-	float edgePixelOffset = (-distanceFinal / edgeThickness + .5) * 1.8;
+	float edgeLength = (posDistance + negDistance);
+	float edgePixelOffset = ((-distanceFinal) / edgeLength + .5) * 1.0;
+
 
 	if(shadeEPO){
-		FragColor = vec4(vec3(edgePixelOffset),1.0);
+		// FragColor = vec4(vec3(edgePixelOffset),1.0);
+		FragColor = vec4(vec3(smoothstep(0.0, pixsize.x*45.0, distanceFinal), -edgePixelOffset, edgePixelOffset), 1.0);
 		return;
 	}
 
