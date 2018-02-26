@@ -70,23 +70,11 @@ void main()
 
     lighting = mix(lighting, BACKGROUND, BackMask);
 
-    // implement fog
-    float linearDepth = depthCoord.z;
-    float fogEnd = 0.5;
-    float fogStart = -2;
-    float fog = 1.0 - clamp((fogEnd - linearDepth)/(fogEnd - fogStart), 0.0, 1.0);
-    linearDepth = depthCoord.y;
-    //fogStart = 15;
-    //fogEnd = 14;
-    if (fog > 0.0) {
-       fog = fog - clamp((fogEnd - linearDepth)/(fogEnd - fogStart), 0.0, fog);
-    }
-
     // exponential fog
-    float fogDensity = 1.0;
-    linearDepth = depthCoord.z;
-    fog = 1.0 - clamp(exp(fogDensity*linearDepth), 0.0, 1.0); 
-    
+    float fogDensity = .051;
+    float linearDepth = FragPos.z-4;
+    float fog = 1.0 - clamp(exp(-fogDensity*linearDepth), 0.0, 1.0); 
+
     lighting = mix (lighting, vec3(0.7), fog);
     FragColor = vec4(lighting, 1.0);
 }
