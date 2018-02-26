@@ -16,7 +16,6 @@
 #include "Scene.hpp"
 #include "Entity.hpp"
 #include "Component.hpp"
-#include "PostProcessor.h"
 
 #include "utility/Texture.h"
 
@@ -25,19 +24,13 @@ namespace RenderSystem{
   // Any render settings should be declared here as 'static'
   static int w_width, w_height;
 
-  // Any data structures used inbetween renders should also be stored here as static
-  static GLuint quadVAO;
-  static GLuint quadVBO;
-
   static GLuint render_out_FBO;
   static GLuint render_out_color;
   static Program* deferred_export = NULL;
   static Program* deferred_uber = NULL;
 
   static ShaderLibrary* shaderlib = NULL;
-
-  static PostProcessor* postProcessor = nullptr;
-
+  
   struct Buffers {
     std::vector<unsigned int> buffers;
     unsigned int gBuffer, depthBuffer;

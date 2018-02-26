@@ -6,6 +6,7 @@
 #include "GameState.hpp"
 #include "Entity.hpp"
 
+#include "PostProcessor.h"
 #include "components/SimpleComponents.hpp"
 #include "components/Geometry.hpp"
 #include "LightingComponents.hpp"
@@ -15,7 +16,6 @@
         // Forward Declarations
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
-static void initQuad(GLuint &quadVAO, GLuint &quadVBO);
 static void prepareDeferred(GLuint gbuffer);
 static void initDeferredBuffers(int width, int height, RenderSystem::Buffers &buffers);
 static void initOutputFBO(GLuint* render_out_FBO, GLuint* render_out_color, int w_width, int w_height, GLenum filter);
@@ -48,9 +48,9 @@ void RenderSystem::init(ApplicationState &appstate){
 
   initOutputFBO(&render_out_FBO, &render_out_color, w_width, w_height, GL_LINEAR);
 
-  initQuad(quadVAO, quadVBO);
   initCaustics();
-  postProcessor = new PostProcessor(appstate.window);
+
+  PostProcessor::init(w_width, w_height, shaderlib);
 }
 
 void RenderSystem::render(ApplicationState &appstate, GameState &gstate, double elapsedTime){
@@ -69,22 +69,7 @@ void RenderSystem::render(ApplicationState &appstate, GameState &gstate, double 
   updateCaustic();
   applyShading(gstate.activeScene, *shaderlib);
 
-  postProcessor->doPostProcessing(render_out_color, 0);
-
-  // glBindFramebuffer(GL_FRAMEBUFFER, 0);
-  // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  // runFXAA();
-}
-
-void RenderSystem::runFXAA(){
-  shaderlib->makeActive("FXAA");
-  glActiveTexture(GL_TEXTURE0);
-  glBindTexture(GL_TEXTURE_2D, render_out_color);
-  glUniform1i(shaderlib->getActive().getUniform("pixtex"), 0);
-  glUniform2f(shaderlib->getActive().getUniform("resolution"), static_cast<float>(w_width), static_cast<float>(w_height));    glBindVertexArray(quadVAO);
-  glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-  glBindVertexArray(0);
-  ASSERT_NO_GLERR();
+  PostProcessor::doPostProcessing(render_out_color, 0);
 }
 
 // This function is aweful and I hate it.
@@ -134,17 +119,14 @@ void RenderSystem::applyShading(Scene* scene, ShaderLibrary &shaderlib){
 
   shaderlib.fastActivate(deferred_uber);
   bindGBuf(deferred_buffers, deferred_uber);
-  // setUniforms
-  glBindVertexArray(quadVAO);
-  glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-  glBindVertexArray(0);
+  PostProcessor::drawFSQuad();
 }
 
 void RenderSystem::onResize(GLFWwindow *window, int width, int height){
   w_width = width;
   w_height = height;
   glViewport(0, 0, width, height);
-  postProcessor->resize();
+  PostProcessor::resize(width, height);
 }
 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -237,24 +219,6 @@ static void drawGeometry(const Geometry &geomcomp, RenderSystem::MVPset &MVP, Pr
   GLSL::disableVertexAttribArray(h_pos);
   glBindBuffer(GL_ARRAY_BUFFER, 0);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-}
-
-static void initQuad(GLuint &quadVAO, GLuint &quadVBO) {
-  float quadVertices[] = {
-    // positions
-    -1.0f,  1.0f, 0.0f,
-    -1.0f, -1.0f, 0.0f,
-    1.0f,  1.0f, 0.0f,
-    1.0f, -1.0f, 0.0f,
-  };
-  // setup plane VAO
-  glGenVertexArrays(1, &quadVAO);
-  glGenBuffers(1, &quadVBO);
-  glBindVertexArray(quadVAO);
-  glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
-  glEnableVertexAttribArray(0);
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 }
 
 static void prepareDeferred(GLuint gbuffer){

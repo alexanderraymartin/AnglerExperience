@@ -1,58 +1,50 @@
 #pragma once
+#ifndef POSTPROCESSOR_H_
+#define POSTPROCESSOR_H_
+
 #include <iostream>
 #include <fstream>
 #include "GLSL.h"
 #include "Program.h"
+#include "utility/ShaderLibrary.hpp"
 #include <GLFW/glfw3.h>
-#include "common.h"
+#include <common.h>
 
-class PostProcessor
-{
-public:
-	PostProcessor(GLFWwindow* window);
-	void doPostProcessing(GLuint texture, GLuint output);
-	void toggleBloom();
-	bool hasBloom();
-	void resize();
 
-private:
-	/***************************************/
-	// Bloom
-	void applyBrightFilter(GLuint colorTex);
-	void applyHBlur(GLuint brightTex);
-	void applyVBlur(GLuint brightTex);
-	void applyCombine(GLuint colorTex, GLuint brightTex);
-	void processBloom(GLuint texture, GLuint output);
-	/***************************************/
+namespace PostProcessor{
 
-	void init();
-	void initShaders();
-	void initBloomShaders();
-	void initQuad();
-	void createFBO(GLuint& fb, GLuint& tex);
+  static int w_width;
+  static int w_height;
 
-	//geometry for texture render
-	GLuint quad_VertexArrayID;
-	GLuint quad_vertexbuffer;
+  static GLuint quadVAO;
+  static GLuint quadVBO;
 
-	//reference to texture FBO
-	GLuint frameBuf[2];
-	GLuint texBuf[2];
-	GLuint depthBuf;
+  static GLuint frameBuf[2];
+  static GLuint texBuf[2];
+  static UINT _nextFBO = 0;
 
-	/***************************************/
-	// Bloom shaders
-	Program* brightFilterProg;
-	Program* hBlurProg;
-	Program* vBlurProg;
-	Program* combineProg;
-	/***************************************/
+  static GLuint depthBuf;
 
-	// Where the resources are loaded from
-	std::string resourceDirectory = "../shaders";
-	int windowWidth, windowHeight;
-	GLFWwindow* window;
+  static bool _hasBloom = true;
+  static bool _hasFXAA = true;
 
-	bool _hasBloom = true;
-};
+  static ShaderLibrary* shaderlib = nullptr;
 
+  void init(int w_width, int w_height, ShaderLibrary* shaderlib);
+
+  void doPostProcessing(GLuint texture, GLuint output);
+  void processBloom(GLuint texture, int output);
+  void runFXAA(GLuint texture, int output);
+  void drawFSQuad();
+
+  static void toggleBloom() {_hasBloom = !_hasBloom;}
+  static bool hasBloom() {return(_hasBloom);}
+  static void toggleFXAA() {_hasFXAA = !_hasFXAA;}
+  static bool hasFXAA() {return(_hasFXAA);}
+
+  static UINT nextFBO(){return((_nextFBO = ++_nextFBO % 2));}
+  static void resize(int w_width, int w_height) {init(w_width, w_height, shaderlib);};
+  
+}
+
+#endif
