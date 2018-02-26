@@ -23,16 +23,15 @@ static void bindGBuf(RenderSystem::Buffers &buffers, Program* shader);
 
 static void postProcess(/*...*/);
 
-static void drawEntities(Scene* scene, RenderSystem::MVPset &MVP, ShaderLibrary &shaderlib);
-static void drawEntity(const Entity* entity, RenderSystem::MVPset &MVP, ShaderLibrary &shaderlib);
+static void createGBufAttachment(int width, int height, vector<unsigned int> &buffers, unsigned int channel_type, unsigned int channels, unsigned int type);
+static void setGBufAttachment(RenderSystem::Buffers &buffers);
+static void setGBufDepth(int width, int height, RenderSystem::Buffers &buffers);
+
 static void drawGeometry(const Geometry &geomcomp, RenderSystem::MVPset &MVP, Program* shader);
 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
         // RenderSystem functions
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-
-static GLuint zoomFBO = 0;
-static GLuint zoomcolor = 0;
 
 void RenderSystem::init(ApplicationState &appstate){
   glfwGetFramebufferSize(appstate.window, &w_width, &w_height);
@@ -51,6 +50,7 @@ void RenderSystem::init(ApplicationState &appstate){
 
   initQuad(quadVAO, quadVBO);
   initCaustics();
+  postProcessor = new PostProcessor(appstate.window);
 }
 
 void RenderSystem::render(ApplicationState &appstate, GameState &gstate, double elapsedTime){
@@ -69,11 +69,11 @@ void RenderSystem::render(ApplicationState &appstate, GameState &gstate, double 
   updateCaustic();
   applyShading(gstate.activeScene, *shaderlib);
 
-  // postProcess();
+  postProcessor->doPostProcessing(render_out_color);
 
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  runFXAA();
+  // glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  // runFXAA();
 }
 
 void RenderSystem::runFXAA(){
@@ -144,6 +144,7 @@ void RenderSystem::onResize(GLFWwindow *window, int width, int height){
   w_width = width;
   w_height = height;
   glViewport(0, 0, width, height);
+  postProcessor->resize();
 }
 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -157,17 +158,17 @@ void RenderSystem::drawEntities(Scene* scene){
   }
 }
 
-void RenderSystem::drawEntity(const Entity* entity) {
+void RenderSystem::drawEntity(const Entity* entity){
   SolidMesh* mesh = NULL;
   Pose* pose = NULL;
-  for (Component *cmpnt : entity->components) {
+  for(Component *cmpnt : entity->components){
     GATHER_SINGLE_COMPONENT(mesh, SolidMesh*, cmpnt);
     GATHER_SINGLE_COMPONENT(pose, Pose*, cmpnt);
-
-    if (mesh && pose) {
+    
+    if(mesh && pose){
       MVP.M.pushMatrix();
       MVP.M.multMatrix(pose->getAffineMatrix());
-      for (Geometry &geo : mesh->geometries) {
+      for(Geometry &geo : mesh->geometries){
         shaderlib->fastActivate(deferred_export);
         drawGeometry(geo, MVP, deferred_export);
       }
@@ -177,8 +178,8 @@ void RenderSystem::drawEntity(const Entity* entity) {
       return;
     }
   }
-  if (mesh) {
-    for (Geometry &geo : mesh->geometries) {
+  if(mesh){
+    for(Geometry &geo : mesh->geometries){
       shaderlib->fastActivate(deferred_export);
       drawGeometry(geo, MVP, deferred_export);
     }
