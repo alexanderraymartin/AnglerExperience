@@ -38,21 +38,22 @@ float luma(in vec3 rgb){
 void main()
 {	
 	vec2 pixsize = 1.0 / resolution;
-	vec2 norm_dev_cord = ((FragPos.xy + 1.0) * .5);
-	vec4 fullimage = texture(pixtex, norm_dev_cord);
+	vec2 NDC = ((FragPos.xy + 1.0) * .5);
+
+	vec4 fullimage = texture(pixtex, NDC);
 	vec3 image = fullimage.rgb;
 
-	vec3 rgbC  = texture2D(pixtex, norm_dev_cord).rgb; // Center
+	vec3 rgbC  = texture2D(pixtex, NDC).rgb; // Center
 
 	float lumaC  = luma(rgbC);
-	float lumaN  = luma(texture2D(pixtex, norm_dev_cord+NORTH).rgb);
-	float lumaS  = luma(texture2D(pixtex, norm_dev_cord+SOUTH).rgb);
-	float lumaE  = luma(texture2D(pixtex, norm_dev_cord+EAST).rgb);
-	float lumaW  = luma(texture2D(pixtex, norm_dev_cord+WEST).rgb);
-	float lumaNE = luma(texture2D(pixtex, norm_dev_cord+NORTHEAST).rgb);
-	float lumaNW = luma(texture2D(pixtex, norm_dev_cord+NORTHWEST).rgb);
-	float lumaSE = luma(texture2D(pixtex, norm_dev_cord+SOUTHEAST).rgb);
-	float lumaSW = luma(texture2D(pixtex, norm_dev_cord+SOUTHWEST).rgb);
+	float lumaN  = luma(texture2D(pixtex, NDC+NORTH).rgb);
+	float lumaS  = luma(texture2D(pixtex, NDC+SOUTH).rgb);
+	float lumaE  = luma(texture2D(pixtex, NDC+EAST).rgb);
+	float lumaW  = luma(texture2D(pixtex, NDC+WEST).rgb);
+	float lumaNE = luma(texture2D(pixtex, NDC+NORTHEAST).rgb);
+	float lumaNW = luma(texture2D(pixtex, NDC+NORTHWEST).rgb);
+	float lumaSE = luma(texture2D(pixtex, NDC+SOUTHEAST).rgb);
+	float lumaSW = luma(texture2D(pixtex, NDC+SOUTHWEST).rgb);
 
 	float rangeMin = min(lumaC, min(min(lumaN, lumaW), min(lumaS, lumaE)));
 	float rangeMax = max(lumaC, max(max(lumaN, lumaW), max(lumaS, lumaE)));
@@ -72,16 +73,15 @@ void main()
 		abs((0.25 * lumaNW) + (-0.5 * lumaW) + (0.25 * lumaSW)) +
 		abs((0.50 * lumaN ) + (-1.0 * lumaC) + (0.50 * lumaS )) +
 		abs((0.25 * lumaNE) + (-0.5 * lumaE) + (0.25 * lumaSE));
-	bool horzSpan = edgeHorz >= edgeVert; 
 	float horzSpanf = step(edgeVert, edgeHorz);
 
 	if(showEdges){
-		FragColor = vec4(( horzSpan ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0) ) , 1.0);
+		FragColor = vec4(( horzSpanf*vec3(1.0, 0.0, 0.0) + INV(horzSpanf)*vec3(0.0, 1.0, 0.0) ) , 1.0);
 		return;
 	}
 
-	float negLuma = (horzSpan ? lumaS : lumaW);
-	float posLuma = (horzSpan ? lumaN : lumaE);
+	float negLuma = horzSpanf*lumaS + INV(horzSpanf)*lumaW;
+	float posLuma = horzSpanf*lumaN + INV(horzSpanf)*lumaE;
 	float negGradient = negLuma - lumaC;
 	float posGradient = posLuma - lumaC; 
 
@@ -94,12 +94,12 @@ void main()
 
 	float gradientScaled = .25*max(abs(negGradient), abs(posGradient));
 
-	float stepLen = (horzSpan ? pixsize.y : pixsize.x) * (-1.0*INV(isNegative) + 1.0*isNegative);
+	float stepLen = (horzSpanf*pixsize.y + INV(horzSpanf)*pixsize.x) * (-1.0*INV(isNegative) + 1.0*isNegative);
 	
 	float lumaLocal = .5*(isNegative*posLuma + INV(isNegative)*negLuma + lumaC);
 
 
-	vec2 searchCoord = norm_dev_cord + ((stepLen * .5) * mix(vec2(1.0, 0.0), vec2(0.0, 1.0), horzSpanf));
+	vec2 searchCoord = NDC + ((stepLen * .5) * mix(vec2(1.0, 0.0), vec2(0.0, 1.0), horzSpanf));
 
 	vec2 searchOffset = INV(horzSpanf)*NORTH + horzSpanf*EAST;
 	vec2 posSearch = searchCoord + searchOffset;
@@ -108,36 +108,31 @@ void main()
 	float posLumaEnd = luma(texture(pixtex, posSearch).rgb) - lumaLocal;
 	float negLumaEnd = luma(texture(pixtex, negSearch).rgb) - lumaLocal;
 
-	// True if this is the endpoint along the line
-	bool posCap = abs(posLumaEnd) >= gradientScaled;
-	bool negCap = abs(negLumaEnd) >= gradientScaled;
+	float posCap = step(gradientScaled, abs(posLumaEnd)); // abs(posLumaEnd) >= gradientScaled;
+	float negCap = step(gradientScaled, abs(negLumaEnd)); // abs(negLumaEnd) >= gradientScaled;
 
-	if(!posCap || !negCap){
+	if(posCap == 0.0 || negCap == 0.0){
 		for(int i = 1; i < FXAA_SEARCH_ITERATIONS; i++){
 
 			posLumaEnd = luma(texture(pixtex, posSearch).rgb) - lumaLocal;
 			negLumaEnd = luma(texture(pixtex, negSearch).rgb) - lumaLocal;
 
-			posCap = abs(posLumaEnd) >= gradientScaled;
-			negCap = abs(negLumaEnd) >= gradientScaled;
+			posCap = step(gradientScaled, abs(posLumaEnd));
+			negCap = step(gradientScaled, abs(negLumaEnd));
 
-			if(posCap && negCap){break;}
+			// If both ends reached stop iteration
+			if((posCap * negCap) == 1.0){break;}
 
-			if(!posCap){
-				posSearch += searchOffset;
-			}
-
-			if(!negCap){
-				negSearch -= searchOffset; 
-			}
+			posSearch += searchOffset*INV(posCap);
+			negSearch -= searchOffset*INV(negCap); 
 		}
 	}else if(showEarlyCaps){
 		FragColor = vec4(vec3(1.0, isNegative, 0.0), 1.0);
 		return;
 	}
 
-	float posDistance = horzSpan ? (posSearch.x - norm_dev_cord.x) : (posSearch.y - norm_dev_cord.y);
-	float negDistance = horzSpan ? (norm_dev_cord.x - negSearch.x) : (norm_dev_cord.y - negSearch.y);
+	float posDistance = horzSpanf*(posSearch.x - NDC.x) + INV(horzSpanf)*(posSearch.y - NDC.y);
+	float negDistance = horzSpanf*(NDC.x - negSearch.x) + INV(horzSpanf)*(NDC.y - negSearch.y);
 
 	float biasNeg = step(negDistance, posDistance);
 	float distanceFinal = min(negDistance, posDistance);
@@ -147,7 +142,6 @@ void main()
 
 
 	if(shadeEPO){
-		// FragColor = vec4(vec3(edgePixelOffset),1.0);
 		FragColor = vec4(vec3(smoothstep(0.0, pixsize.x*45.0, distanceFinal), -edgePixelOffset, edgePixelOffset), 1.0);
 		return;
 	}
@@ -163,12 +157,7 @@ void main()
 
 	float finalOffset = max(edgePixelOffset*correctVariation, subPixelOffsetFinal);
 
-	vec2 finalCoord = norm_dev_cord;
-	if(horzSpan){
-		finalCoord.y = norm_dev_cord.y + finalOffset * stepLen;
-	}else{
-		finalCoord.x = norm_dev_cord.x + finalOffset * stepLen;
-	}
+	vec2 finalCoord = horzSpanf*vec2(NDC.x, NDC.y + finalOffset*stepLen) + INV(horzSpanf)*vec2(NDC.x + finalOffset*stepLen, NDC.y);
 
-	FragColor = texture(pixtex, useFXAA ? finalCoord : norm_dev_cord);
+	FragColor = texture(pixtex, useFXAA ? finalCoord : NDC);
 }
