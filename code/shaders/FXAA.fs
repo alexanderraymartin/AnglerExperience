@@ -7,16 +7,16 @@
 #define FXAA_EDGE_THRESH (1.0/8.0)
 #define FXAA_EDGE_THRESH_MIN (1.0/32.0)
 #define FXAA_SUBPIXEL_QUALITY .75
-#define FXAA_SEARCH_ITERATIONS 128
+#define FXAA_SEARCH_ITERATIONS 32
 
-#define NORTH vec2(0.0, pixsize.y)
-#define SOUTH vec2(0.0, -pixsize.y)
-#define EAST vec2(pixsize.x, 0.0)
-#define WEST vec2(-pixsize.x, 0.0)
-#define NORTHEAST vec2(pixsize.x, pixsize.y)
-#define NORTHWEST vec2(-pixsize.x, pixsize.y)
-#define SOUTHEAST vec2(pixsize.x, -pixsize.y)
-#define SOUTHWEST vec2(-pixsize.x, -pixsize.y)
+#define NORTH ivec2(0.0, 1)
+#define SOUTH ivec2(0.0, -1)
+#define EAST ivec2(1, 0.0)
+#define WEST ivec2(-1, 0.0)
+#define NORTHEAST ivec2(1, 1)
+#define NORTHWEST ivec2(-1, 1)
+#define SOUTHEAST ivec2(1, -1)
+#define SOUTHWEST ivec2(-1, -1)
 
 #define INV(_F) (1.0 - (_F))
 
@@ -46,14 +46,14 @@ void main()
 	vec3 rgbC  = texture2D(pixtex, NDC).rgb; // Center
 
 	float lumaC  = luma(rgbC);
-	float lumaN  = luma(texture2D(pixtex, NDC+NORTH).rgb);
-	float lumaS  = luma(texture2D(pixtex, NDC+SOUTH).rgb);
-	float lumaE  = luma(texture2D(pixtex, NDC+EAST).rgb);
-	float lumaW  = luma(texture2D(pixtex, NDC+WEST).rgb);
-	float lumaNE = luma(texture2D(pixtex, NDC+NORTHEAST).rgb);
-	float lumaNW = luma(texture2D(pixtex, NDC+NORTHWEST).rgb);
-	float lumaSE = luma(texture2D(pixtex, NDC+SOUTHEAST).rgb);
-	float lumaSW = luma(texture2D(pixtex, NDC+SOUTHWEST).rgb);
+	float lumaN  = luma(textureOffset(pixtex, NDC, NORTH).rgb);
+	float lumaS  = luma(textureOffset(pixtex, NDC, SOUTH).rgb);
+	float lumaE  = luma(textureOffset(pixtex, NDC, EAST).rgb);
+	float lumaW  = luma(textureOffset(pixtex, NDC, WEST).rgb);
+	float lumaNE = luma(textureOffset(pixtex, NDC, NORTHEAST).rgb);
+	float lumaNW = luma(textureOffset(pixtex, NDC, NORTHWEST).rgb);
+	float lumaSE = luma(textureOffset(pixtex, NDC, SOUTHEAST).rgb);
+	float lumaSW = luma(textureOffset(pixtex, NDC, SOUTHWEST).rgb);
 
 	float rangeMin = min(lumaC, min(min(lumaN, lumaW), min(lumaS, lumaE)));
 	float rangeMax = max(lumaC, max(max(lumaN, lumaW), max(lumaS, lumaE)));
@@ -101,7 +101,7 @@ void main()
 
 	vec2 searchCoord = NDC + ((stepLen * .5) * mix(vec2(1.0, 0.0), vec2(0.0, 1.0), horzSpanf));
 
-	vec2 searchOffset = INV(horzSpanf)*NORTH + horzSpanf*EAST;
+	vec2 searchOffset = INV(horzSpanf)*pixsize.y*NORTH + horzSpanf*pixsize.x*EAST;
 	vec2 posSearch = searchCoord + searchOffset;
 	vec2 negSearch = searchCoord - searchOffset;
 
