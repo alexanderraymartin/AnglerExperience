@@ -82,7 +82,8 @@ void RenderSystem::render(ApplicationState &appstate, GameState &gstate, double 
 	  glUniform2f(shaderlib->getActive().getUniform("resolution"), static_cast<float>(w_width), static_cast<float>(w_height));
 	  glUniform1i(shaderlib->getActive().getUniform("showEdges"), glfwGetKey(appstate.window, GLFW_KEY_L) == GLFW_PRESS);
     glUniform1i(shaderlib->getActive().getUniform("showPosNeg"), glfwGetKey(appstate.window, GLFW_KEY_P) == GLFW_PRESS);
-    glUniform1i(shaderlib->getActive().getUniform("useFXAA"), glfwGetKey(appstate.window, GLFW_KEY_SPACE) == GLFW_PRESS);
+    glUniform1i(shaderlib->getActive().getUniform("showEarlyCaps"), glfwGetKey(appstate.window, GLFW_KEY_C) == GLFW_PRESS);
+    glUniform1i(shaderlib->getActive().getUniform("useFXAA"), glfwGetKey(appstate.window, GLFW_KEY_SPACE) != GLFW_PRESS);
     glUniform1i(shaderlib->getActive().getUniform("shadeEPO"), glfwGetKey(appstate.window, GLFW_KEY_O) == GLFW_PRESS);
     glBindVertexArray(quadVAO);
 	  glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);

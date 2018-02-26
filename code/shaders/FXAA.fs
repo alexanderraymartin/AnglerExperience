@@ -27,6 +27,7 @@ uniform sampler2D pixtex;
 uniform vec2 resolution;
 uniform bool showEdges;
 uniform bool showPosNeg;
+uniform bool showEarlyCaps;
 uniform bool shadeEPO;
 uniform bool useFXAA;
 
@@ -93,9 +94,10 @@ void main()
 
 	float gradientScaled = .25*max(abs(negGradient), abs(posGradient));
 
-	float stepLen = (horzSpan ? pixsize.y : pixsize.x) * -INV(isNegative);
+	float stepLen = (horzSpan ? pixsize.y : pixsize.x) * (-1.0*INV(isNegative) + 1.0*isNegative);
 	
 	float lumaLocal = .5*(isNegative*posLuma + INV(isNegative)*negLuma + lumaC);
+
 
 	vec2 searchCoord = norm_dev_cord + ((stepLen * .5) * mix(vec2(1.0, 0.0), vec2(0.0, 1.0), horzSpanf));
 
@@ -129,9 +131,9 @@ void main()
 				negSearch -= searchOffset; 
 			}
 		}
-	}else{
+	}else if(showEarlyCaps){
 		FragColor = vec4(vec3(1.0, isNegative, 0.0), 1.0);
-		if(!useFXAA) return;
+		return;
 	}
 
 	float posDistance = horzSpan ? (posSearch.x - norm_dev_cord.x) : (posSearch.y - norm_dev_cord.y);
@@ -141,7 +143,7 @@ void main()
 	float distanceFinal = min(negDistance, posDistance);
 
 	float edgeLength = (posDistance + negDistance);
-	float edgePixelOffset = ((-distanceFinal) / edgeLength + .5) * 1.0;
+	float edgePixelOffset = ((-distanceFinal) / edgeLength + .5);
 
 
 	if(shadeEPO){
