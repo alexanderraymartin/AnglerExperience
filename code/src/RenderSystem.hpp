@@ -75,6 +75,8 @@ namespace RenderSystem{
 
 	void drawEntity(const Entity* entity);
 
+	void runFXAA();
+
 	void onResize(GLFWwindow *window, int width, int height);
 
 

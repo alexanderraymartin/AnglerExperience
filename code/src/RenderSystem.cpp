@@ -49,8 +49,6 @@ void RenderSystem::init(ApplicationState &appstate){
 
   initOutputFBO(&render_out_FBO, &render_out_color, w_width, w_height, GL_LINEAR);
 
-  initOutputFBO(&zoomFBO, &zoomcolor, w_width, w_height, GL_NEAREST);
-
   initQuad(quadVAO, quadVBO);
   initCaustics();
 }
@@ -71,48 +69,22 @@ void RenderSystem::render(ApplicationState &appstate, GameState &gstate, double 
   updateCaustic();
   applyShading(gstate.activeScene, *shaderlib);
 
-  // Pass the rendered scene to the screen
-  {
-	  glBindFramebuffer(GL_FRAMEBUFFER, zoomFBO);
-	  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	  shaderlib->makeActive("FXAA");
-	  glActiveTexture(GL_TEXTURE0);
-	  glBindTexture(GL_TEXTURE_2D, render_out_color);
-	  glUniform1i(shaderlib->getActive().getUniform("pixtex"), 0);
-	  glUniform2f(shaderlib->getActive().getUniform("resolution"), static_cast<float>(w_width), static_cast<float>(w_height));
-	  glUniform1i(shaderlib->getActive().getUniform("showEdges"), glfwGetKey(appstate.window, GLFW_KEY_L) == GLFW_PRESS);
-    glUniform1i(shaderlib->getActive().getUniform("showPosNeg"), glfwGetKey(appstate.window, GLFW_KEY_P) == GLFW_PRESS);
-    glUniform1i(shaderlib->getActive().getUniform("showEarlyCaps"), glfwGetKey(appstate.window, GLFW_KEY_C) == GLFW_PRESS);
-    glUniform1i(shaderlib->getActive().getUniform("useFXAA"), glfwGetKey(appstate.window, GLFW_KEY_SPACE) != GLFW_PRESS);
-    glUniform1i(shaderlib->getActive().getUniform("shadeEPO"), glfwGetKey(appstate.window, GLFW_KEY_O) == GLFW_PRESS);
-    glBindVertexArray(quadVAO);
-	  glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-	  glBindVertexArray(0);
-	  ASSERT_NO_GLERR();
-  }
-  {
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    shaderlib->makeActive("zoom_tool");
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, zoomcolor);
-    glUniform1i(shaderlib->getActive().getUniform("pixtex"), 0);
-    glUniform2f(shaderlib->getActive().getUniform("resolution"), static_cast<float>(w_width), static_cast<float>(w_height));
-    double x, y; glfwGetCursorPos(appstate.window, &x, &y);
-    glUniform4f(shaderlib->getActive().getUniform("mousePos"),
-      (float) x,
-      (float) w_height-y,
-      glfwGetMouseButton(appstate.window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS ? 1.0f : 0.0f,
-      glfwGetMouseButton(appstate.window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS ? 1.0f : 0.0f
-    );
-    glBindVertexArray(quadVAO);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    glBindVertexArray(0);
-    ASSERT_NO_GLERR();
-  }
-
   // postProcess();
 
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  runFXAA();
+}
+
+void RenderSystem::runFXAA(){
+  shaderlib->makeActive("FXAA");
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, render_out_color);
+  glUniform1i(shaderlib->getActive().getUniform("pixtex"), 0);
+  glUniform2f(shaderlib->getActive().getUniform("resolution"), static_cast<float>(w_width), static_cast<float>(w_height));    glBindVertexArray(quadVAO);
+  glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+  glBindVertexArray(0);
+  ASSERT_NO_GLERR();
 }
 
 // This function is aweful and I hate it.
@@ -267,21 +239,21 @@ static void drawGeometry(const Geometry &geomcomp, RenderSystem::MVPset &MVP, Pr
 }
 
 static void initQuad(GLuint &quadVAO, GLuint &quadVBO) {
-	float quadVertices[] = {
-		// positions
-		-1.0f,  1.0f, 0.0f,
-		-1.0f, -1.0f, 0.0f,
-		1.0f,  1.0f, 0.0f,
-		1.0f, -1.0f, 0.0f,
-	};
-	// setup plane VAO
-	glGenVertexArrays(1, &quadVAO);
-	glGenBuffers(1, &quadVBO);
-	glBindVertexArray(quadVAO);
-	glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+  float quadVertices[] = {
+    // positions
+    -1.0f,  1.0f, 0.0f,
+    -1.0f, -1.0f, 0.0f,
+    1.0f,  1.0f, 0.0f,
+    1.0f, -1.0f, 0.0f,
+  };
+  // setup plane VAO
+  glGenVertexArrays(1, &quadVAO);
+  glGenBuffers(1, &quadVBO);
+  glBindVertexArray(quadVAO);
+  glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+  glEnableVertexAttribArray(0);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 }
 
 static void prepareDeferred(GLuint gbuffer){
@@ -345,21 +317,21 @@ static void initDeferredBuffers(int width, int height, RenderSystem::Buffers &bu
 }
 
 static void initOutputFBO(GLuint* outFBO, GLuint* outColor, int w_width, int w_height, GLenum filter) {
-	glGenFramebuffers(1, outFBO);
-	glBindFramebuffer(GL_FRAMEBUFFER, *outFBO);
-	glGenTextures(1, outColor);
-	glBindTexture(GL_TEXTURE_2D, *outColor);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w_width, w_height, 0, GL_RGBA, GL_UNSIGNED_INT, NULL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, *outColor, 0);
-	glDrawBuffer(GL_COLOR_ATTACHMENT0);
+  glGenFramebuffers(1, outFBO);
+  glBindFramebuffer(GL_FRAMEBUFFER, *outFBO);
+  glGenTextures(1, outColor);
+  glBindTexture(GL_TEXTURE_2D, *outColor);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w_width, w_height, 0, GL_RGBA, GL_UNSIGNED_INT, NULL);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, *outColor, 0);
+  glDrawBuffer(GL_COLOR_ATTACHMENT0);
 
-	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-		fprintf(stderr, "Framebuffer not complete!\n");
-	}
+  if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+    fprintf(stderr, "Framebuffer not complete!\n");
+  }
 
-	ASSERT_NO_GLERR();
+  ASSERT_NO_GLERR();
 }
 
 void RenderSystem::initCaustics() {
