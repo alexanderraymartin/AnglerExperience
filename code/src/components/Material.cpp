@@ -53,6 +53,9 @@ void Material::setIntProp(const string &keyword, int prop){
 void Material::setFloatProp(const string &keyword, float prop){
   internalMaterial[keyword] = {Material::Prop_Type_Float, prop};
 }
+void Material::setBoolProp(const string &keyword, bool prop){
+  internalMaterial[keyword] = {Material::Prop_Type_Bool, prop};
+}
 void Material::setVec2Prop(const string &keyword, const vec2 &prop){
   internalMaterial[keyword] = {Material::Prop_Type_Vec2, {prop.x, prop.y}};
 }
@@ -83,6 +86,9 @@ void Material::applyIndividual(const string &key, const json &value, Material::T
       break;
     case Prop_Type_Float:
       glUniform1f(shader->getUniform(key), value.get<float>());
+      break;
+    case Prop_Type_Bool:
+      glUniform1i(shader->getUniform(key), value.get<bool>());
       break;
     case Prop_Type_Vec2:
       glUniform2fv(shader->getUniform(key), 1, value.get<array<GLfloat, 2>>().data());

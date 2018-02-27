@@ -6,21 +6,22 @@
 #include "GameState.hpp"
 #include "Entity.hpp"
 
+#include "PostProcessor.h"
 #include "components/SimpleComponents.hpp"
 #include "components/Geometry.hpp"
 #include "LightingComponents.hpp"
-#include "PostProcessor.h"
+
 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-// Forward Declarations
+        // Forward Declarations
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
-static void initQuad(GLuint &quadVAO, GLuint &quadVBO);
 static void prepareDeferred(GLuint gbuffer);
 static void initDeferredBuffers(int width, int height, RenderSystem::Buffers &buffers);
-static void initOutputFBO(GLuint* render_out_FBO, GLuint* render_out_color, int w_width, int w_height);
+static void initOutputFBO(GLuint* render_out_FBO, GLuint* render_out_color, int w_width, int w_height, GLenum filter);
 static void bindGBuf(RenderSystem::Buffers &buffers, Program* shader);
 
+static void postProcess(/*...*/);
 
 static void createGBufAttachment(int width, int height, vector<unsigned int> &buffers, unsigned int channel_type, unsigned int channels, unsigned int type);
 static void setGBufAttachment(RenderSystem::Buffers &buffers);
@@ -29,7 +30,7 @@ static void setGBufDepth(int width, int height, RenderSystem::Buffers &buffers);
 static void drawGeometry(const Geometry &geomcomp, RenderSystem::MVPset &MVP, Program* shader);
 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-// RenderSystem functions
+        // RenderSystem functions
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 void RenderSystem::init(ApplicationState &appstate){
@@ -45,11 +46,11 @@ void RenderSystem::init(ApplicationState &appstate){
 
   initDeferredBuffers(w_width, w_height, deferred_buffers);
 
-  initOutputFBO(&render_out_FBO, &render_out_color, w_width, w_height);
+  initOutputFBO(&render_out_FBO, &render_out_color, w_width, w_height, GL_LINEAR);
 
-  initQuad(quadVAO, quadVBO);
   initCaustics();
-  postProcessor = new PostProcessor(appstate.window);
+
+  PostProcessor::init(w_width, w_height, shaderlib);
 }
 
 void RenderSystem::render(ApplicationState &appstate, GameState &gstate, double elapsedTime){
@@ -68,7 +69,7 @@ void RenderSystem::render(ApplicationState &appstate, GameState &gstate, double 
   updateCaustic();
   applyShading(gstate.activeScene, *shaderlib);
 
-  postProcessor->doPostProcessing(render_out_color);
+  PostProcessor::doPostProcessing(render_out_color, 0);
 }
 
 // This function is aweful and I hate it.
@@ -118,21 +119,18 @@ void RenderSystem::applyShading(Scene* scene, ShaderLibrary &shaderlib){
 
   shaderlib.fastActivate(deferred_uber);
   bindGBuf(deferred_buffers, deferred_uber);
-  // setUniforms
-  glBindVertexArray(quadVAO);
-  glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-  glBindVertexArray(0);
+  PostProcessor::drawFSQuad();
 }
 
 void RenderSystem::onResize(GLFWwindow *window, int width, int height){
   w_width = width;
   w_height = height;
   glViewport(0, 0, width, height);
-  postProcessor->resize();
+  PostProcessor::resize(width, height);
 }
 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-// Static Functions and Helpers
+        // Static Functions and Helpers
 // It may be possible to move some parts of this into one or more libraries. 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
@@ -223,24 +221,6 @@ static void drawGeometry(const Geometry &geomcomp, RenderSystem::MVPset &MVP, Pr
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
 
-static void initQuad(GLuint &quadVAO, GLuint &quadVBO) {
-	float quadVertices[] = {
-		// positions
-		-1.0f,  1.0f, 0.0f,
-		-1.0f, -1.0f, 0.0f,
-		1.0f,  1.0f, 0.0f,
-		1.0f, -1.0f, 0.0f,
-	};
-	// setup plane VAO
-	glGenVertexArrays(1, &quadVAO);
-	glGenBuffers(1, &quadVBO);
-	glBindVertexArray(quadVAO);
-	glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-}
-
 static void prepareDeferred(GLuint gbuffer){
   glBindFramebuffer(GL_FRAMEBUFFER, gbuffer);
   glClearColor(0.0, 0.0, 0.0, 1.0);
@@ -301,22 +281,22 @@ static void initDeferredBuffers(int width, int height, RenderSystem::Buffers &bu
     fprintf(stderr, "Framebuffer not complete!\n");
 }
 
-static void initOutputFBO(GLuint* render_out_FBO, GLuint* render_out_color, int w_width, int w_height) {
-	glGenFramebuffers(1, render_out_FBO);
-	glBindFramebuffer(GL_FRAMEBUFFER, *render_out_FBO);
-	glGenTextures(1, render_out_color);
-	glBindTexture(GL_TEXTURE_2D, *render_out_color);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w_width, w_height, 0, GL_RGBA, GL_UNSIGNED_INT, NULL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, *render_out_color, 0);
-	glDrawBuffer(GL_COLOR_ATTACHMENT0);
+static void initOutputFBO(GLuint* outFBO, GLuint* outColor, int w_width, int w_height, GLenum filter) {
+  glGenFramebuffers(1, outFBO);
+  glBindFramebuffer(GL_FRAMEBUFFER, *outFBO);
+  glGenTextures(1, outColor);
+  glBindTexture(GL_TEXTURE_2D, *outColor);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w_width, w_height, 0, GL_RGBA, GL_UNSIGNED_INT, NULL);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, *outColor, 0);
+  glDrawBuffer(GL_COLOR_ATTACHMENT0);
 
-	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-		fprintf(stderr, "Framebuffer not complete!\n");
-	}
+  if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+    fprintf(stderr, "Framebuffer not complete!\n");
+  }
 
-	ASSERT_NO_GLERR();
+  ASSERT_NO_GLERR();
 }
 
 void RenderSystem::initCaustics() {

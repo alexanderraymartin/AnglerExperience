@@ -37,7 +37,7 @@
 
 using namespace std;
 
-#define FORCEWINDOW
+// #define FORCEWINDOW
 
 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -48,7 +48,6 @@ static void initGL();
 static void initLibs(TopLevelResources &resources);
 static void initGLFW(ApplicationState &appstate);
 static void initShaders(ApplicationState &appstate);
-static void initPrimitives(TopLevelResources &resources);
 static void initScene(ApplicationState &appstate, GameState &gstate);
 
 static GLFWmonitor* autoDetectScreen(UINT* width, UINT* height);
@@ -75,7 +74,6 @@ int main(int argc, char** argv){
   initLibs(appstate.resources); // Can be split up in needed
   initGL();
   initShaders(appstate);
-  initPrimitives(appstate.resources);
 
   initScene(appstate, gstate);
 
@@ -213,17 +211,10 @@ static void initShaders(ApplicationState &appstate){
   }
   json shaderjson;
   shaderfile >> shaderjson;
-  for(json &j : shaderjson["pairs"]){
-    appstate.resources.shaderlib.add(j[0]["basename"].get<string>(), new Program(j));
-    cout << "Loaded shader: " << j[0]["basename"].get<string>() << endl;
+  for(json::iterator it = shaderjson["pairs"].begin(); it != shaderjson["pairs"].end(); it++){
+    appstate.resources.shaderlib.add(it.key(), new Program(it.value()));
+    cout << "Loaded shader: " << it.key() << endl;
   }
-
-  // TODO: Iterate through given shader source files, compile them, and store the in the shaderlib.
-  // Note: To prevent this from being ungodly long due to the nature of Zoe's Program class we should 
-  // probably set up some kind of alternative for adding all the uniforms and attributes. JSON loader? 
-}
-static void initPrimitives(TopLevelResources &resources){
-  // TODO: Load some primitive geometry into appropriate OpenGL buffers. (quads, tris, cube, sphere, ect...)
 }
 
 static void initScene(ApplicationState &appstate, GameState &gstate){
@@ -246,9 +237,9 @@ static void initScene(ApplicationState &appstate, GameState &gstate){
     pointlight->attach(new Pose(glm::vec3(-1.5, 0.5, 1.0)));
   }
 
-  Entity* cube;
+  Entity* groundplane;
   {
-    cube = new Entity();
+    groundplane = new Entity();
 
     Material mat("" STRIFY(ASSET_DIR) "/simple-phong.mat", appstate.resources.shaderlib);
 
@@ -261,11 +252,11 @@ static void initScene(ApplicationState &appstate, GameState &gstate){
     Pose* pose = new Pose(glm::vec3(0.0906, -0.31318, 48.0));
     pose->orient = glm::angleAxis(glm::radians(4.92f), glm::vec3(.793, -.051, .607));
     pose->scale = glm::vec3(45.0, .05, 48.0);
-    cube->attach(mesh);
-    cube->attach(pose);
+    groundplane->attach(mesh);
+    groundplane->attach(pose);
   }
 
-  gstate.activeScene->addEntity(cube);
+  gstate.activeScene->addEntity(groundplane);
   gstate.activeScene->addEntity(sun);
   gstate.activeScene->addEntity(pointlight);
 }
