@@ -31,8 +31,8 @@ def gather_shaders(path):
 	vslist = []
 	fslist = []
 	fullpath = pathutils.abspath(path)
-	foundvert = glob(fullpath+"/*.vs") + glob(fullpath+"/*.vert")
-	foundfrag = glob(fullpath+"/*.fs") + glob(fullpath+"/*.frag")
+	foundvert = glob(fullpath+"/**/*.vs", recursive = True) + glob(fullpath+"/**/*.vert", recursive = True)
+	foundfrag = glob(fullpath+"/**/*.fs", recursive = True) + glob(fullpath+"/**/*.frag", recursive = True)
 
 	for vs in foundvert:
 		vslist.append(VertexShader(vs))
