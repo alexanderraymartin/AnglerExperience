@@ -211,13 +211,10 @@ static void initShaders(ApplicationState &appstate){
   }
   json shaderjson;
   shaderfile >> shaderjson;
-  for(json &j : shaderjson["pairs"]){
-    appstate.resources.shaderlib.add(j[0]["basename"].get<string>(), new Program(j));
-    cout << "Loaded shader: " << j[0]["basename"].get<string>() << endl;
+  for(json::iterator it = shaderjson["pairs"].begin(); it != shaderjson["pairs"].end(); it++){
+    appstate.resources.shaderlib.add(it.key(), new Program(it.value()));
+    cout << "Loaded shader: " << it.key() << endl;
   }
-  json FXAAjson = { shaderjson["all"]["vert_passthru"], shaderjson["all"]["frag_FXAA"] };
-  Program* FXAAprog = new Program(FXAAjson);
-  appstate.resources.shaderlib.add("FXAA", FXAAprog);
 }
 
 static void initScene(ApplicationState &appstate, GameState &gstate){

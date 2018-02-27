@@ -1,4 +1,5 @@
-// pair: passthru.vs
+// PAIR: vert_passthru
+
 // Fast Aproximate Anti-aliasing (FXAA) implementation created using the original 
 // 2011 Timothy Lottes Whitepaper https://developer.download.nvidia.com/assets/gamedev/files/sdk/11/FXAA_WhitePaper.pdf
 // and the 2016 Simon Rodriguez tutorial http://blog.simonrodriguez.fr/articles/30-07-2016_implementing_fxaa.html

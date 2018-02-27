@@ -10,6 +10,9 @@
 #include <GLFW/glfw3.h>
 #include <common.h>
 
+#define ABS(_X) (_X >= 0 ? _X : -_X)
+
+#define POSTPROCESSOR_BUFFER_COUNT 2
 
 namespace PostProcessor{
 
@@ -19,32 +22,26 @@ namespace PostProcessor{
   static GLuint quadVAO;
   static GLuint quadVBO;
 
-  static GLuint frameBuf[2];
-  static GLuint texBuf[2];
+  static GLuint frameBuf[POSTPROCESSOR_BUFFER_COUNT];
+  static GLuint texBuf[POSTPROCESSOR_BUFFER_COUNT];
+
   static UINT _nextFBO = 0;
 
   static GLuint depthBuf;
-
-  static bool _hasBloom = true;
-  static bool _hasFXAA = true;
 
   static ShaderLibrary* shaderlib = nullptr;
 
   void init(int w_width, int w_height, ShaderLibrary* shaderlib);
 
   void doPostProcessing(GLuint texture, GLuint output);
-  void processBloom(GLuint texture, int output);
-  void runFXAA(GLuint texture, int output);
+  int processBloom(GLuint texture, int output);
+  int runFXAA(GLuint texture, int output);
   void drawFSQuad();
 
-  static void toggleBloom() {_hasBloom = !_hasBloom;}
-  static bool hasBloom() {return(_hasBloom);}
-  static void toggleFXAA() {_hasFXAA = !_hasFXAA;}
-  static bool hasFXAA() {return(_hasFXAA);}
-
-  static UINT nextFBO(){return((_nextFBO = ++_nextFBO % 2));}
+  static UINT nextFBO() {return((_nextFBO = ++_nextFBO % POSTPROCESSOR_BUFFER_COUNT));}
+  static UINT lastFBO() {return(ABS(_nextFBO - 1) % POSTPROCESSOR_BUFFER_COUNT);}
+  static UINT offsetFBO(int offset) {return(ABS(_nextFBO + offset) % POSTPROCESSOR_BUFFER_COUNT);}
   static void resize(int w_width, int w_height) {init(w_width, w_height, shaderlib);};
-  
 }
 
 #endif

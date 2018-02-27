@@ -10,58 +10,60 @@ static void applyVBlur(GLuint brightTex, Program* vBlurProg);
 static void applyCombine(GLuint colorTex, GLuint brightTex, Program* combineProg);
 
 
-
-void PostProcessor::init(int w_width, int w_height, ShaderLibrary* shaderlib)
+void PostProcessor::init(int _w_width, int _w_height, ShaderLibrary* _shaderlib)
 {
-	shaderlib = shaderlib;
-	w_width = w_width;
-	w_height = w_height;
+  shaderlib = _shaderlib;
+  w_width = _w_width;
+  w_height = _w_height;
 
-	initQuad(quadVAO, quadVBO);
+  initQuad(quadVAO, quadVBO);
 
-	//create three frame buffer objects to toggle between
-	glGenFramebuffers(2, frameBuf);
-	glGenTextures(2, texBuf);
-	glGenRenderbuffers(1, &depthBuf);
+  //create three frame buffer objects to toggle between
+  glGenFramebuffers(POSTPROCESSOR_BUFFER_COUNT, frameBuf);
+  glGenTextures(POSTPROCESSOR_BUFFER_COUNT, texBuf);
+  glGenRenderbuffers(1, &depthBuf);
 
-	// create FBO 
-	createFBO(w_width, w_height, frameBuf[0], texBuf[0], GL_LINEAR, GL_CLAMP_TO_EDGE);
-
-	// create FBO 2 to ping-pong back and forth
-	createFBO(w_width, w_height, frameBuf[1], texBuf[1], GL_LINEAR, GL_CLAMP_TO_EDGE);
+  for(int i = 0; i < POSTPROCESSOR_BUFFER_COUNT; i++){
+    createFBO(w_width, w_height, frameBuf[i], texBuf[i], GL_LINEAR, GL_CLAMP_TO_EDGE);
+  }
 }
 
 void PostProcessor::doPostProcessing(GLuint texture, GLuint output)
 {
-	processBloom(texture, -1);
-	runFXAA(texture, output);
+  int lastout;
+  lastout = processBloom(texture, -1);
+  lastout = runFXAA(texBuf[lastout], output);
 }
 
-void PostProcessor::processBloom(GLuint texture, int output)
+int PostProcessor::processBloom(GLuint texture, int output)
 {
-	// Bright filter
-	glBindFramebuffer(GL_FRAMEBUFFER, frameBuf[nextFBO()]);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	applyBrightFilter(texture, shaderlib->getPtr("bloom_brightFilter"));
+  int fbo1 = nextFBO();
+  int fbo2 = nextFBO();
+  // Bright filter
+  glBindFramebuffer(GL_FRAMEBUFFER, frameBuf[fbo1]);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  applyBrightFilter(texture, shaderlib->getPtr("bloom_brightFilter"));
 
-	// Horizontal blur
-	glBindFramebuffer(GL_FRAMEBUFFER, frameBuf[nextFBO()]);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	applyHBlur(texBuf[0], shaderlib->getPtr("bloom_horizontalBlur"));
+  // Horizontal blur
+  glBindFramebuffer(GL_FRAMEBUFFER, frameBuf[fbo2]);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  applyHBlur(texBuf[fbo1], shaderlib->getPtr("bloom_horizontalBlur"));
 
-	// Vertical blur
-	glBindFramebuffer(GL_FRAMEBUFFER, frameBuf[nextFBO()]);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	applyVBlur(texBuf[1], shaderlib->getPtr("bloom_verticalBlur"));
+  // Vertical blur
+  glBindFramebuffer(GL_FRAMEBUFFER, frameBuf[fbo1]);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  applyVBlur(texBuf[fbo2], shaderlib->getPtr("bloom_verticalBlur"));
 
-	// Combine
-	glBindFramebuffer(GL_FRAMEBUFFER, output > 0 ? (GLuint)output : nextFBO());
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	applyCombine(texture, texBuf[0], shaderlib->getPtr("bloom_combine"));
+  // Combine
+  glBindFramebuffer(GL_FRAMEBUFFER, output >= 0 ? (GLuint)output : frameBuf[fbo2]);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  applyCombine(texture, texBuf[fbo1], shaderlib->getPtr("bloom_combine"));
+  return(fbo2);
 }
 
-void PostProcessor::runFXAA(GLuint texture, int output){
-  glBindFramebuffer(GL_FRAMEBUFFER, output > 0 ? (GLuint)output : nextFBO());
+int PostProcessor::runFXAA(GLuint texture, int output){
+  int fboid = output >= 0 ? (GLuint)output : frameBuf[nextFBO()];
+  glBindFramebuffer(GL_FRAMEBUFFER, fboid);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   shaderlib->makeActive("FXAA");
   glActiveTexture(GL_TEXTURE0);
@@ -70,12 +72,13 @@ void PostProcessor::runFXAA(GLuint texture, int output){
   glUniform2f(shaderlib->getActive().getUniform("resolution"), static_cast<float>(w_width), static_cast<float>(w_height));
   drawFSQuad();
   ASSERT_NO_GLERR();
+  return(fboid);
 }
 
 void PostProcessor::drawFSQuad(){
-	glBindVertexArray(quadVAO);
-	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-	glBindVertexArray(0);
+  glBindVertexArray(quadVAO);
+  glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+  glBindVertexArray(0);
 }
 
 static void initQuad(GLuint &quadVAO, GLuint &quadVBO) {
@@ -98,69 +101,69 @@ static void initQuad(GLuint &quadVAO, GLuint &quadVBO) {
 
 static void createFBO(int w_width, int w_height, GLuint& fb, GLuint& tex, GLenum filter, GLenum wrap)
 {
-	//set up framebuffer
-	glBindFramebuffer(GL_FRAMEBUFFER, fb);
-	//set up texture
-	glBindTexture(GL_TEXTURE_2D, tex);
+  //set up framebuffer
+  glBindFramebuffer(GL_FRAMEBUFFER, fb);
+  //set up texture
+  glBindTexture(GL_TEXTURE_2D, tex);
 
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w_width, w_height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrap);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w_width, w_height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrap);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap);
 
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
 
-	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-	{
-		std::cout << "Error setting up frame buffer - exiting" << std::endl;
-		exit(0);
-	}
+  if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+  {
+    std::cout << "Error setting up frame buffer - exiting" << std::endl;
+    exit(0);
+  }
 }
 
 static void applyBrightFilter(GLuint colorTex, Program* brightFilterProg)
 {
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, colorTex);
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, colorTex);
 
-	brightFilterProg->bind();
-	glUniform1i(brightFilterProg->getUniform("colorTexture"), 0);
-	PostProcessor::drawFSQuad();
-	brightFilterProg->unbind();
+  brightFilterProg->bind();
+  glUniform1i(brightFilterProg->getUniform("colorTexture"), 0);
+  PostProcessor::drawFSQuad();
+  brightFilterProg->unbind();
 }
 
 static void applyHBlur(GLuint brightTex, Program* hBlurProg)
 {
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, brightTex);
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, brightTex);
 
-	hBlurProg->bind();
-	glUniform1i(hBlurProg->getUniform("brightTexture"), 0);
-	PostProcessor::drawFSQuad();
-	hBlurProg->unbind();
+  hBlurProg->bind();
+  glUniform1i(hBlurProg->getUniform("brightTexture"), 0);
+  PostProcessor::drawFSQuad();
+  hBlurProg->unbind();
 }
 
 static void applyVBlur(GLuint brightTex, Program* vBlurProg)
 {
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, brightTex);
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, brightTex);
 
-	vBlurProg->bind();
-	glUniform1i(vBlurProg->getUniform("brightTexture"), 0);
-	PostProcessor::drawFSQuad();
-	vBlurProg->unbind();
+  vBlurProg->bind();
+  glUniform1i(vBlurProg->getUniform("brightTexture"), 0);
+  PostProcessor::drawFSQuad();
+  vBlurProg->unbind();
 }
 
 static void applyCombine(GLuint colorTex, GLuint brightTex, Program* combineProg)
 {
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, colorTex);
-	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, brightTex);
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, colorTex);
+  glActiveTexture(GL_TEXTURE1);
+  glBindTexture(GL_TEXTURE_2D, brightTex);
 
-	combineProg->bind();
-	glUniform1i(combineProg->getUniform("colorTexture"), 0);
-	glUniform1i(combineProg->getUniform("brightTexture"), 1);
-	PostProcessor::drawFSQuad();
-	combineProg->unbind();
+  combineProg->bind();
+  glUniform1i(combineProg->getUniform("colorTexture"), 0);
+  glUniform1i(combineProg->getUniform("brightTexture"), 1);
+  PostProcessor::drawFSQuad();
+  combineProg->unbind();
 }
