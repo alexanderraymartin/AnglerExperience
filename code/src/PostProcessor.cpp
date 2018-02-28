@@ -32,47 +32,72 @@ void PostProcessor::doPostProcessing(GLuint texture, GLuint output)
 {
   int lastout;
   lastout = processBloom(texture, -1);
+  lastout = processDepthOfField(texBuf[lastout], -1);
   lastout = runFXAA(texBuf[lastout], output);
 }
 
 int PostProcessor::processBloom(GLuint texture, int output)
 {
-  int fbo1 = nextFBO();
-  int fbo2 = nextFBO();
+  int fboID1 = nextFBO();
+  int fboID2 = nextFBO();
   // Bright filter
-  glBindFramebuffer(GL_FRAMEBUFFER, frameBuf[fbo1]);
+  glBindFramebuffer(GL_FRAMEBUFFER, frameBuf[fboID1]);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   applyBrightFilter(texture, shaderlib->getPtr("bloom_brightFilter"));
 
-  // Horizontal blur
-  glBindFramebuffer(GL_FRAMEBUFFER, frameBuf[fbo2]);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  applyHBlur(texBuf[fbo1], shaderlib->getPtr("bloom_horizontalBlur"));
-
-  // Vertical blur
-  glBindFramebuffer(GL_FRAMEBUFFER, frameBuf[fbo1]);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  applyVBlur(texBuf[fbo2], shaderlib->getPtr("bloom_verticalBlur"));
+  for (int i = 0; i < BLUR_AMOUNT; i++)
+  {
+    // Horizontal blur
+    glBindFramebuffer(GL_FRAMEBUFFER, frameBuf[fboID2]);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    applyHBlur(texBuf[fboID1], shaderlib->getPtr("bloom_horizontalBlur"));
+    
+    // Vertical blur
+    glBindFramebuffer(GL_FRAMEBUFFER, frameBuf[fboID1]);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    applyVBlur(texBuf[fboID2], shaderlib->getPtr("bloom_verticalBlur"));
+  }
 
   // Combine
-  glBindFramebuffer(GL_FRAMEBUFFER, output >= 0 ? (GLuint)output : frameBuf[fbo2]);
+  glBindFramebuffer(GL_FRAMEBUFFER, output >= 0 ? (GLuint)output : frameBuf[fboID2]);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  applyCombine(texture, texBuf[fbo1], shaderlib->getPtr("bloom_combine"));
-  return(fbo2);
+  applyCombine(texture, texBuf[fboID1], shaderlib->getPtr("bloom_combine"));
+  ASSERT_NO_GLERR();
+  return(fboID2);
 }
 
 int PostProcessor::runFXAA(GLuint texture, int output){
-  int fboid = output >= 0 ? (GLuint)output : frameBuf[nextFBO()];
-  glBindFramebuffer(GL_FRAMEBUFFER, fboid);
+  int fboID = output >= 0 ? (GLuint)output : nextFBO();
+  glBindFramebuffer(GL_FRAMEBUFFER, output >= 0 ? (GLuint)output : frameBuf[fboID]);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
   shaderlib->makeActive("FXAA");
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, texture);
   glUniform1i(shaderlib->getActive().getUniform("pixtex"), 0);
   glUniform2f(shaderlib->getActive().getUniform("resolution"), static_cast<float>(w_width), static_cast<float>(w_height));
+  
   drawFSQuad();
   ASSERT_NO_GLERR();
-  return(fboid);
+  return fboID;
+}
+
+int PostProcessor::processDepthOfField(GLuint texture, int output)
+{
+  int fboID = output >= 0 ? (GLuint)output : nextFBO();
+  glBindFramebuffer(GL_FRAMEBUFFER, output >= 0 ? (GLuint)output : frameBuf[fboID]);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+  // TODO: change to be depth of field
+  shaderlib->makeActive("FXAA");
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, texture);
+  glUniform1i(shaderlib->getActive().getUniform("pixtex"), 0);
+  glUniform2f(shaderlib->getActive().getUniform("resolution"), static_cast<float>(w_width), static_cast<float>(w_height));
+ 
+  drawFSQuad();
+  ASSERT_NO_GLERR();
+  return fboID;
 }
 
 void PostProcessor::drawFSQuad(){
