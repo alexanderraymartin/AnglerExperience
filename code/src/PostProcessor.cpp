@@ -31,7 +31,7 @@ void PostProcessor::doPostProcessing(GLuint texture)
 {
   int lastout;
   lastout = processBloom(texture, false);
-  //lastout = processDepthOfField(texBuf[lastout], false, 0.5);
+  lastout = processDepthOfField(texBuf[lastout], false, 0.3);
   lastout = runFXAA(texBuf[lastout], true);
 }
 
@@ -58,6 +58,23 @@ int PostProcessor::processBloom(GLuint texture, bool isLast)
   return fboID2;
 }
 
+int PostProcessor::processDepthOfField(GLuint texture, bool isLast, float focusDepth)
+{
+	int fboID1 = nextFBO();
+	int fboID2 = isLast ? 0 : nextFBO();
+
+	for (int i = 0; i < DEPTH_OF_FIELD_BLUR_AMOUNT; i++)
+	{
+		// Horizontal blur
+		applyDepthOfFieldShader(texture, frameBuf[fboID1], shaderlib->getPtr("depthOfField_horizontalBlur"), focusDepth);
+
+		// Vertical blur
+		applyDepthOfFieldShader(texBuf[fboID1], isLast ? 0 : frameBuf[fboID2], shaderlib->getPtr("depthOfField_verticalBlur"), focusDepth);
+	}
+	ASSERT_NO_GLERR();
+	return fboID2;
+}
+
 int PostProcessor::runFXAA(GLuint texture, bool isLast)
 {
   int fboID = isLast ? 0 : nextFBO();
@@ -73,22 +90,6 @@ int PostProcessor::runFXAA(GLuint texture, bool isLast)
   drawFSQuad();
   ASSERT_NO_GLERR();
   return fboID;
-}
-
-int PostProcessor::processDepthOfField(GLuint texture, bool isLast, float focusDepth)
-{
-  int fboID1 = nextFBO();
-  int fboID2 = isLast ? 0 : nextFBO();
-  
-  // Horizontal blur
-  applyDepthOfFieldShader(texture, frameBuf[fboID1], shaderlib->getPtr("depthOfField_horizontalBlur"), focusDepth);
-      
-  // Vertical blur
-  applyDepthOfFieldShader(texBuf[fboID1], isLast ? 0 : frameBuf[fboID2], shaderlib->getPtr("depthOfField_verticalBlur"), focusDepth);
-
-  drawFSQuad();
-  ASSERT_NO_GLERR();
-  return fboID2;
 }
 
 void PostProcessor::drawFSQuad(){
