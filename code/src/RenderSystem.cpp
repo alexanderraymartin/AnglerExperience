@@ -69,7 +69,7 @@ void RenderSystem::render(ApplicationState &appstate, GameState &gstate, double 
   updateCaustic();
   applyShading(gstate.activeScene, *shaderlib);
 
-  PostProcessor::doPostProcessing(render_out_color, 0);
+  PostProcessor::doPostProcessing(render_out_color);
 }
 
 // This function is aweful and I hate it.
