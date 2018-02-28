@@ -227,12 +227,13 @@ static void initScene(ApplicationState &appstate, GameState &gstate){
   for (int i = 0; i < 19; i++) {
     vector<Geometry> minnowgeo;
     string num = i < 9 ? string("0") + to_string(i+1) : to_string(i+1);
-    Geometry::loadFullObj((string("" STRIFY(ASSET_DIR) "/minnow/Minnnow_ioexperment_0000")
+    Geometry::loadFullObj((string("" STRIFY(ASSET_DIR) "/minnow2/Minnow_0000")
       + num + string(".obj")).c_str(), minnowgeo);
     meshes.push_back(new SolidMesh(minnowgeo));
   }
 
   minnow->attach(new AnimatableMesh(meshes, 0.066));
+  minnow->attach(new LinearRotationAnim(glm::vec3(0, 1, 0), .75));
   minnow->attach(new Pose(glm::vec3(0.0, 0.0, 3.0), glm::angleAxis(1.5f, glm::vec3(0.0f, 1.0f, 0.0f))));
 //  minnow->attach(new LinearRotationAnim(glm::vec3(0.0,1.0,0.0), .75));
   gstate.activeScene->addEntity(minnow);

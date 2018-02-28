@@ -40,6 +40,7 @@ void main()
 	color = vec4(col, 1.0);
 
 	/* Test vertex switching by coloring based on vertex ID */
+/*
 	if (vertid % 3 == 0) {
 		color = vec4(vertID / 1.0, 0.0, 0.0, 1.0);
 	} else if (vertid % 3 == 1) {
@@ -47,4 +48,5 @@ void main()
 	} else {
 		color = vec4(0.0, 0.0, vertID / 1.0, 1.0);
 	}
+*/
 }
