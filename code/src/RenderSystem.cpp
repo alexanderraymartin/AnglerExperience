@@ -51,7 +51,7 @@ void RenderSystem::init(ApplicationState &appstate){
 
   initOutputFBO(&render_out_FBO, &render_out_color, w_width, w_height, GL_LINEAR);
 
-  initDepthUniforms(1, 1);
+  initDepthUniforms(1, 10);
   initCaustics();
   initShadowMap(w_width, w_height);
 
@@ -71,14 +71,15 @@ void RenderSystem::render(ApplicationState &appstate, GameState &gstate, double 
   prepareDeferred(deferred_buffers.gBuffer);
   drawEntities(gstate.activeScene, deferred_export);
 
+  updateLighting(gstate.activeScene);
+  updateDepthUniforms();
+
   prepareDeferred(shadowFramebuffer);
   drawEntities(gstate.activeScene, deferred_shadow);
 
-  setShadowMap();
-  updateLighting(gstate.activeScene);
+  updateShadowMap();
   updateCaustic();
   applyShading(gstate.activeScene, *shaderlib);
-
 
   PostProcessor::doPostProcessing(render_out_color, 0);
 }
@@ -109,6 +110,11 @@ void RenderSystem::updateLighting(Scene* scene){
         SunLight* sun = static_cast<SunLight*>(cmpnt);
         glUniform3fv(deferred_uber->getUniform("sunCol"), 1, value_ptr(sun->color));
         glUniform3fv(deferred_uber->getUniform("sunDir"), 1, value_ptr(sun->direction));
+
+        vec3 lightPos = vec3(0, 10, 0);
+        depthSet.lightView.loadIdentity();
+        depthSet.lightView.lookAt(lightPos, lightPos + sun->direction, vec3(0,1,0));
+
       }else if(ptcomp && pose){
         // This would be a great place to implement DOD
         snprintf(colid, baselen[0], colbase, lightnum);
@@ -326,41 +332,42 @@ void RenderSystem::initCaustics() {
   }
 }
 
-void RenderSystem::initDepthUniforms(double orthoSize, double aspectRatio) {
-  //VPB.V.lookAt(vec3(-2.0,10.0,0.0), vec3(0.0,0.0,0.0), vec3(0.0,-1.0,0.0));
-  //VPB.P.ortho(-10, 10, -10, 10, 0, 100);
-  //VPB.B.loadIdentity();
-  //// VPB.B.translate(vec3(0.5, 0.5, 0.5));
-  //VPB.B.scale(vec3(1.0, 7.5, 1.0));
+void RenderSystem::initDepthUniforms(double causticSize, double shadowSize) {
+  depthSet.causticOrtho.ortho(-causticSize, causticSize, -causticSize, causticSize, 0.01, 100.0);
 
-  //VPB.V.lookAt(vec3(0.0, 3.4, 0.0), vec3(0.0, 3.1, 3.0), vec3(0,-1,0));
-  //VPB.V.lookAt(vec3(0.0, 10, 5.0), vec3(0, 2.5, 10), vec3(0,-1,0));
-  //VPB.V.lookAt(vec3(0.0, 5, 5.0), vec3(0, 2.5, 10), vec3(0,-1,0));
-  VPB.V.lookAt(vec3(0, 10, 0), vec3(0, 2.5, 10), vec3(0,-1,0));
-  VPB.P.ortho(-orthoSize * aspectRatio, orthoSize * aspectRatio, -orthoSize, orthoSize, 0.01, 100.0);
-  VPB.B.loadIdentity();
-  VPB.B.translate(vec3(0.5, 0.5, 0.5));
-  VPB.B.scale(0.5);
+  depthSet.shadowOrtho.ortho(-shadowSize, shadowSize, -shadowSize, shadowSize, 0.01, 100.0);
+
+  depthSet.bias.loadIdentity();
+  depthSet.bias.translate(vec3(0.5, 0.5, 0.5));
+  depthSet.bias.scale(0.5);
+}
+
+void RenderSystem::updateDepthUniforms() {
+  mat4 causticMatrix = depthSet.bias.topMatrix() * depthSet.causticOrtho.topMatrix() * depthSet.lightView.topMatrix();
+  mat4 shadowMatrix = depthSet.bias.topMatrix() * depthSet.shadowOrtho.topMatrix() * depthSet.lightView.topMatrix();
+  mat4 depthMatrix = depthSet.shadowOrtho.topMatrix() * depthSet.lightView.topMatrix();
 
   deferred_uber->bind();
 
-  glUniformMatrix4fv(deferred_uber->getUniform("depthV"), 1, GL_FALSE, value_ptr(VPB.V.topMatrix()));
-  glUniformMatrix4fv(deferred_uber->getUniform("depthP"), 1, GL_FALSE, value_ptr(VPB.P.topMatrix()));
-  glUniformMatrix4fv(deferred_uber->getUniform("depthB"), 1, GL_FALSE, value_ptr(VPB.B.topMatrix()));
+  glUniformMatrix4fv(deferred_uber->getUniform("causticMatrix"), 1, GL_FALSE, value_ptr(causticMatrix));
+  glUniformMatrix4fv(deferred_uber->getUniform("shadowMatrix"), 1, GL_FALSE, value_ptr(shadowMatrix));
 
   deferred_uber->unbind();
 
   deferred_shadow->bind();
 
-  glUniformMatrix4fv(deferred_shadow->getUniform("depthV"), 1, GL_FALSE, value_ptr(VPB.V.topMatrix()));
-  glUniformMatrix4fv(deferred_shadow->getUniform("depthP"), 1, GL_FALSE, value_ptr(VPB.P.topMatrix()));
+  glUniformMatrix4fv(deferred_shadow->getUniform("depthMatrix"), 1, GL_FALSE, value_ptr(depthMatrix));
 
   deferred_shadow->unbind();
 }
 
 void RenderSystem::updateCaustic() {
+  deferred_uber->bind();
+
   caustics[currCaustic]->bind(deferred_uber->getUniform("caustic"));
   currCaustic = ++currCaustic >= CAUSTIC_COUNT ? 0 : currCaustic;
+
+  deferred_uber->unbind();
 }
 
 void RenderSystem::initShadowMap(int width, int height) {
@@ -388,7 +395,7 @@ void RenderSystem::initShadowMap(int width, int height) {
     exit(0);
 }
 
-void RenderSystem::setShadowMap() {
+void RenderSystem::updateShadowMap() {
   deferred_uber->bind();
 
   glActiveTexture(GL_TEXTURE0 + (deferred_buffers.buffers.size() + CAUSTIC_COUNT));

@@ -48,13 +48,14 @@ namespace RenderSystem{
   static MVPset MVP;
 
   struct DepthSet {
-    MatrixStack V;
-    MatrixStack P;
-    MatrixStack B;
+    MatrixStack lightView;
+    MatrixStack causticOrtho;
+    MatrixStack shadowOrtho;
+    MatrixStack bias;
   };
 
   const static int CAUSTIC_COUNT = 32;
-  static DepthSet VPB;
+  static DepthSet depthSet;
   static int currCaustic = 0;
   static string causticDir;
   static std::shared_ptr<Texture> caustics[CAUSTIC_COUNT];
@@ -78,18 +79,18 @@ namespace RenderSystem{
 
   void onResize(GLFWwindow *window, int width, int height);
 
-  void initDepthUniforms();
 
-  void initDepthUniforms(double orthoSize, double aspectRatio);
+  void initDepthUniforms(double causticOrtho, double shadowOrtho);
+
+  void updateDepthUniforms();
 
   void initCaustics();
 
   void updateCaustic();
 
-
   void initShadowMap(int width, int height);
 
-  void setShadowMap();
+  void updateShadowMap();
 
 };
 
