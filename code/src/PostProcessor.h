@@ -13,7 +13,8 @@
 #define ABS(_X) (_X >= 0 ? _X : -_X)
 
 #define POSTPROCESSOR_BUFFER_COUNT 2
-#define BLOOM_BLUR_AMOUNT 2
+#define BLOOM_BLUR_AMOUNT 1
+#define BLOOM_FBO_DOWN_SCALE 4
 #define DEPTH_OF_FIELD_BLUR_AMOUNT 3
 
 namespace PostProcessor{
@@ -38,7 +39,7 @@ namespace PostProcessor{
   void doPostProcessing(GLuint texture);
   int processBloom(GLuint texture, bool isLast);
   int runFXAA(GLuint texture, bool isLast);
-  int processDepthOfField(GLuint texture, bool isLast, float focusDepth);
+  int processDepthOfField(GLuint texture, bool isLast);
   void drawFSQuad();
 
   static UINT nextFBO() {return((_nextFBO = ++_nextFBO % POSTPROCESSOR_BUFFER_COUNT));}

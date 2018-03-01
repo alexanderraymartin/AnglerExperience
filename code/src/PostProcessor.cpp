@@ -4,9 +4,8 @@ static void initQuad(GLuint &quadVAO, GLuint &quadVBO);
 
 static void createFBO(int w_width, int w_height, GLuint& fb, GLuint& tex, GLenum filter, GLenum wrap);
 
-static void applyDepthOfFieldShader(GLuint tex, GLuint fbo, Program* prog);
 static void applyDepthOfFieldCombine(GLuint tex, GLuint blurredTex, GLuint fbo, Program* combineProg);
-static void applyBloomShader(GLuint tex, GLuint fbo, Program* prog);
+static void applyShaderToTexture(GLuint tex, GLuint fbo, Program* prog);
 static void applyBloomCombine(GLuint tex, GLuint brightTex, GLuint fbo, Program* combineProg);
 
 
@@ -31,8 +30,8 @@ void PostProcessor::init(int _w_width, int _w_height, ShaderLibrary* _shaderlib)
 void PostProcessor::doPostProcessing(GLuint texture)
 {
   int lastout;
-  //lastout = processBloom(texture, false);
-  lastout = processDepthOfField(texture, false, 0.3);
+  lastout = processBloom(texture, false);
+  lastout = processDepthOfField(texture, false);
   //lastout = processDepthOfField(texBuf[lastout], false, 0.3);
   lastout = runFXAA(texBuf[lastout], true);
 }
@@ -40,44 +39,54 @@ void PostProcessor::doPostProcessing(GLuint texture)
 int PostProcessor::processBloom(GLuint texture, bool isLast)
 {
   int fboID1 = nextFBO();
-  int fboID2 = nextFBO();
+  // Bloom needs different sized frame buffers
+  GLuint bloomFrameBuf[2];
+  GLuint bloomTexBuf[2];
+
+  glGenFramebuffers(2, bloomFrameBuf);
+  glGenTextures(2, bloomTexBuf);
+
+  createFBO(w_width / BLOOM_FBO_DOWN_SCALE, w_height / BLOOM_FBO_DOWN_SCALE, bloomFrameBuf[0], bloomTexBuf[0], GL_LINEAR, GL_CLAMP_TO_EDGE);
+  createFBO(w_width / BLOOM_FBO_DOWN_SCALE, w_height / BLOOM_FBO_DOWN_SCALE, bloomFrameBuf[1], bloomTexBuf[1], GL_LINEAR, GL_CLAMP_TO_EDGE);
 
   // Bright filter
-  applyBloomShader(texture, frameBuf[fboID1], shaderlib->getPtr("bloom_brightFilter"));
+  glViewport(0, 0, w_width / BLOOM_FBO_DOWN_SCALE, w_height / BLOOM_FBO_DOWN_SCALE);
+  applyShaderToTexture(texture, bloomFrameBuf[0], shaderlib->getPtr("bloom_brightFilter"));
 
   for (int i = 0; i < BLOOM_BLUR_AMOUNT; i++)
   {
     // Horizontal blur
-	applyBloomShader(texBuf[fboID1], frameBuf[fboID2], shaderlib->getPtr("bloom_horizontalBlur"));
+	applyShaderToTexture(bloomTexBuf[0], bloomFrameBuf[1], shaderlib->getPtr("bloom_horizontalBlur"));
     
     // Vertical blur
-	applyBloomShader(texBuf[fboID2], frameBuf[fboID1], shaderlib->getPtr("bloom_verticalBlur"));
+	applyShaderToTexture(bloomTexBuf[1], bloomFrameBuf[0], shaderlib->getPtr("bloom_verticalBlur"));
   }
 
   // Combine
-  applyBloomCombine(texture, texBuf[fboID1], isLast ? 0 : frameBuf[fboID2], shaderlib->getPtr("bloom_combine"));
+  glViewport(0, 0, w_width, w_height);
+  applyBloomCombine(texture, bloomTexBuf[0], isLast ? 0 : frameBuf[fboID1], shaderlib->getPtr("bloom_combine"));
   ASSERT_NO_GLERR();
-  return fboID2;
+  return fboID1;
 }
 
-int PostProcessor::processDepthOfField(GLuint texture, bool isLast, float focusDepth)
+int PostProcessor::processDepthOfField(GLuint texture, bool isLast)
 {
 	int fboID1 = nextFBO();
 	int fboID2 = nextFBO();
 
 	// Horizontal blur 1st pass
-	applyDepthOfFieldShader(texture, frameBuf[fboID1], shaderlib->getPtr("depthOfField_horizontalBlur"));
+	applyShaderToTexture(texture, frameBuf[fboID1], shaderlib->getPtr("depthOfField_horizontalBlur"));
 
 	// Vertical blur 1st pass
-	applyDepthOfFieldShader(texBuf[fboID1], frameBuf[fboID2], shaderlib->getPtr("depthOfField_verticalBlur"));
+	applyShaderToTexture(texBuf[fboID1], frameBuf[fboID2], shaderlib->getPtr("depthOfField_verticalBlur"));
 
 	for (int i = 0; i < DEPTH_OF_FIELD_BLUR_AMOUNT - 1; i++)
 	{
 		// Horizontal blur mutli-pass
-		applyDepthOfFieldShader(texBuf[fboID2], frameBuf[fboID1], shaderlib->getPtr("depthOfField_horizontalBlur"));
+		applyShaderToTexture(texBuf[fboID2], frameBuf[fboID1], shaderlib->getPtr("depthOfField_horizontalBlur"));
 
 		// Vertical blur mutli-pass
-		applyDepthOfFieldShader(texBuf[fboID1], frameBuf[fboID2], shaderlib->getPtr("depthOfField_verticalBlur"));
+		applyShaderToTexture(texBuf[fboID1], frameBuf[fboID2], shaderlib->getPtr("depthOfField_verticalBlur"));
 	}
 	
 	// Combine blur with full res texture
@@ -152,20 +161,6 @@ static void createFBO(int w_width, int w_height, GLuint& fb, GLuint& tex, GLenum
 
 /////////////////////////////////////////////
 /* Depth of Field */
-static void applyDepthOfFieldShader(GLuint tex, GLuint fbo, Program* prog)
-{
-	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, tex);
-
-	prog->bind();
-	glUniform1i(prog->getUniform("tex"), 0);
-	PostProcessor::drawFSQuad();
-	prog->unbind();
-}
-
 static void applyDepthOfFieldCombine(GLuint tex, GLuint blurredTex, GLuint fbo, Program* prog)
 {
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
@@ -186,7 +181,7 @@ static void applyDepthOfFieldCombine(GLuint tex, GLuint blurredTex, GLuint fbo, 
 
 /////////////////////////////////////////////
 /* Bloom */
-static void applyBloomShader(GLuint tex, GLuint fbo, Program* prog)
+static void applyShaderToTexture(GLuint tex, GLuint fbo, Program* prog)
 {
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

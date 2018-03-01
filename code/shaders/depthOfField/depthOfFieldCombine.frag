@@ -9,7 +9,7 @@ uniform sampler2D depthBufTex;
 
 float linearizeDepth(in float depth)
 {
-	float zNear = 0.1;
+	float zNear = 0.01;
 	float zFar  = 100.0;
 	return (2.0 * zNear) / (zFar + zNear - depth * (zFar - zNear));
 }
