@@ -4,9 +4,10 @@ static void initQuad(GLuint &quadVAO, GLuint &quadVBO);
 
 static void createFBO(int w_width, int w_height, GLuint& fb, GLuint& tex, GLenum filter, GLenum wrap);
 
-static void applyDepthOfFieldShader(GLuint tex, GLuint fbo, Program* prog, float focusDepth);
+static void applyDepthOfFieldShader(GLuint tex, GLuint fbo, Program* prog);
+static void applyDepthOfFieldCombine(GLuint tex, GLuint blurredTex, GLuint fbo, Program* combineProg);
 static void applyBloomShader(GLuint tex, GLuint fbo, Program* prog);
-static void applyCombine(GLuint tex, GLuint brightTex, GLuint fbo, Program* combineProg);
+static void applyBloomCombine(GLuint tex, GLuint brightTex, GLuint fbo, Program* combineProg);
 
 
 void PostProcessor::init(int _w_width, int _w_height, ShaderLibrary* _shaderlib)
@@ -54,17 +55,33 @@ int PostProcessor::processBloom(GLuint texture, bool isLast)
   }
 
   // Combine
-  applyCombine(texture, texBuf[fboID1], isLast ? 0 : frameBuf[fboID2], shaderlib->getPtr("bloom_combine"));
+  applyBloomCombine(texture, texBuf[fboID1], isLast ? 0 : frameBuf[fboID2], shaderlib->getPtr("bloom_combine"));
   ASSERT_NO_GLERR();
   return fboID2;
 }
 
 int PostProcessor::processDepthOfField(GLuint texture, bool isLast, float focusDepth)
 {
-	int fboID1 = isLast ? 0 : nextFBO();
+	int fboID1 = nextFBO();
+	int fboID2 = nextFBO();
 
-	// Circular blur
-	applyDepthOfFieldShader(texture, frameBuf[fboID1], shaderlib->getPtr("depthOfField_circularBlur"), focusDepth);
+	// Horizontal blur 1st pass
+	applyDepthOfFieldShader(texture, frameBuf[fboID1], shaderlib->getPtr("depthOfField_horizontalBlur"));
+
+	// Vertical blur 1st pass
+	applyDepthOfFieldShader(texBuf[fboID1], frameBuf[fboID2], shaderlib->getPtr("depthOfField_verticalBlur"));
+
+	for (int i = 0; i < DEPTH_OF_FIELD_BLUR_AMOUNT - 1; i++)
+	{
+		// Horizontal blur mutli-pass
+		applyDepthOfFieldShader(texBuf[fboID2], frameBuf[fboID1], shaderlib->getPtr("depthOfField_horizontalBlur"));
+
+		// Vertical blur mutli-pass
+		applyDepthOfFieldShader(texBuf[fboID1], frameBuf[fboID2], shaderlib->getPtr("depthOfField_verticalBlur"));
+	}
+	
+	// Combine blur with full res texture
+	applyDepthOfFieldCombine(texture, texBuf[fboID2], isLast ? 0 : frameBuf[fboID1], shaderlib->getPtr("depthOfField_depthOfFieldCombine"));
 
 	ASSERT_NO_GLERR();
 	return fboID1;
@@ -135,7 +152,7 @@ static void createFBO(int w_width, int w_height, GLuint& fb, GLuint& tex, GLenum
 
 /////////////////////////////////////////////
 /* Depth of Field */
-static void applyDepthOfFieldShader(GLuint tex, GLuint fbo, Program* prog, float focusDepth)
+static void applyDepthOfFieldShader(GLuint tex, GLuint fbo, Program* prog)
 {
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -144,9 +161,25 @@ static void applyDepthOfFieldShader(GLuint tex, GLuint fbo, Program* prog, float
 	glBindTexture(GL_TEXTURE_2D, tex);
 
 	prog->bind();
-	glUniform1i(prog->getUniform("depthBufTex"), PostProcessor::depthBuf);
 	glUniform1i(prog->getUniform("tex"), 0);
-	glUniform1f(prog->getUniform("focusDepth"), focusDepth);
+	PostProcessor::drawFSQuad();
+	prog->unbind();
+}
+
+static void applyDepthOfFieldCombine(GLuint tex, GLuint blurredTex, GLuint fbo, Program* prog)
+{
+	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, tex);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, blurredTex);
+
+	prog->bind();
+	glUniform1i(prog->getUniform("tex"), 0);
+	glUniform1i(prog->getUniform("blurredTex"), 1);
+	glUniform1i(prog->getUniform("depthBufTex"), PostProcessor::depthBuf);
 	PostProcessor::drawFSQuad();
 	prog->unbind();
 }
@@ -167,7 +200,7 @@ static void applyBloomShader(GLuint tex, GLuint fbo, Program* prog)
 	prog->unbind();
 }
 
-static void applyCombine(GLuint tex, GLuint brightTex, GLuint fbo, Program* combineProg)
+static void applyBloomCombine(GLuint tex, GLuint brightTex, GLuint fbo, Program* combineProg)
 {
   glBindFramebuffer(GL_FRAMEBUFFER, fbo);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
