@@ -30,16 +30,14 @@ namespace PostProcessor{
 
   static UINT _nextFBO = 0;
 
-  static GLuint depthBuf;
-
   static ShaderLibrary* shaderlib = nullptr;
 
   void init(int w_width, int w_height, ShaderLibrary* shaderlib);
 
-  void doPostProcessing(GLuint texture);
+  void doPostProcessing(GLuint texture, GLuint depthBuffer);
   int processBloom(GLuint texture, bool isLast);
   int runFXAA(GLuint texture, bool isLast);
-  int processDepthOfField(GLuint texture, bool isLast);
+  int processDepthOfField(GLuint texture, GLuint depthBuffer, bool isLast);
   void drawFSQuad();
 
   static UINT nextFBO() {return((_nextFBO = ++_nextFBO % POSTPROCESSOR_BUFFER_COUNT));}

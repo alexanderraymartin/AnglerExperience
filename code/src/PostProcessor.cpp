@@ -4,7 +4,7 @@ static void initQuad(GLuint &quadVAO, GLuint &quadVBO);
 
 static void createFBO(int w_width, int w_height, GLuint& fb, GLuint& tex, GLenum filter, GLenum wrap);
 
-static void applyDepthOfFieldCombine(GLuint tex, GLuint blurredTex, GLuint fbo, Program* combineProg);
+static void applyDepthOfFieldCombine(GLuint tex, GLuint blurredTex, GLuint depthBuffer, GLuint fbo, Program* combineProg);
 static void applyShaderToTexture(GLuint tex, GLuint fbo, Program* prog);
 static void applyBloomCombine(GLuint tex, GLuint brightTex, GLuint fbo, Program* combineProg);
 
@@ -20,19 +20,18 @@ void PostProcessor::init(int _w_width, int _w_height, ShaderLibrary* _shaderlib)
   //create three frame buffer objects to toggle between
   glGenFramebuffers(POSTPROCESSOR_BUFFER_COUNT, frameBuf);
   glGenTextures(POSTPROCESSOR_BUFFER_COUNT, texBuf);
-  glGenRenderbuffers(1, &depthBuf);
 
   for(int i = 0; i < POSTPROCESSOR_BUFFER_COUNT; i++){
     createFBO(w_width, w_height, frameBuf[i], texBuf[i], GL_LINEAR, GL_CLAMP_TO_EDGE);
   }
 }
 
-void PostProcessor::doPostProcessing(GLuint texture)
+void PostProcessor::doPostProcessing(GLuint texture, GLuint depthBuffer)
 {
   int lastout;
-  lastout = processBloom(texture, false);
-  lastout = processDepthOfField(texture, false);
-  //lastout = processDepthOfField(texBuf[lastout], false, 0.3);
+  //lastout = processBloom(texture, false);
+  lastout = processDepthOfField(texture, depthBuffer, false);
+  //lastout = processDepthOfField(texBuf[lastout], depthBuffer, false);
   lastout = runFXAA(texBuf[lastout], true);
 }
 
@@ -69,7 +68,7 @@ int PostProcessor::processBloom(GLuint texture, bool isLast)
   return fboID1;
 }
 
-int PostProcessor::processDepthOfField(GLuint texture, bool isLast)
+int PostProcessor::processDepthOfField(GLuint texture, GLuint depthBuffer, bool isLast)
 {
 	int fboID1 = nextFBO();
 	int fboID2 = nextFBO();
@@ -90,7 +89,7 @@ int PostProcessor::processDepthOfField(GLuint texture, bool isLast)
 	}
 	
 	// Combine blur with full res texture
-	applyDepthOfFieldCombine(texture, texBuf[fboID2], isLast ? 0 : frameBuf[fboID1], shaderlib->getPtr("depthOfField_depthOfFieldCombine"));
+	applyDepthOfFieldCombine(texture, texBuf[fboID2], depthBuffer, isLast ? 0 : frameBuf[fboID1], shaderlib->getPtr("depthOfField_depthOfFieldCombine"));
 
 	ASSERT_NO_GLERR();
 	return fboID1;
@@ -161,7 +160,7 @@ static void createFBO(int w_width, int w_height, GLuint& fb, GLuint& tex, GLenum
 
 /////////////////////////////////////////////
 /* Depth of Field */
-static void applyDepthOfFieldCombine(GLuint tex, GLuint blurredTex, GLuint fbo, Program* prog)
+static void applyDepthOfFieldCombine(GLuint tex, GLuint blurredTex, GLuint depthBuffer, GLuint fbo, Program* prog)
 {
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -174,7 +173,7 @@ static void applyDepthOfFieldCombine(GLuint tex, GLuint blurredTex, GLuint fbo, 
 	prog->bind();
 	glUniform1i(prog->getUniform("tex"), 0);
 	glUniform1i(prog->getUniform("blurredTex"), 1);
-	glUniform1i(prog->getUniform("depthBufTex"), PostProcessor::depthBuf);
+	glUniform1i(prog->getUniform("depthBufTex"), depthBuffer);
 	PostProcessor::drawFSQuad();
 	prog->unbind();
 }

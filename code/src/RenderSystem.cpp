@@ -21,8 +21,6 @@ static void initDeferredBuffers(int width, int height, RenderSystem::Buffers &bu
 static void initOutputFBO(GLuint* render_out_FBO, GLuint* render_out_color, int w_width, int w_height, GLenum filter);
 static void bindGBuf(RenderSystem::Buffers &buffers, Program* shader);
 
-static void postProcess(/*...*/);
-
 static void createGBufAttachment(int width, int height, vector<unsigned int> &buffers, unsigned int channel_type, unsigned int channels, unsigned int type);
 static void setGBufAttachment(RenderSystem::Buffers &buffers);
 static void setGBufDepth(int width, int height, RenderSystem::Buffers &buffers);
@@ -69,7 +67,7 @@ void RenderSystem::render(ApplicationState &appstate, GameState &gstate, double 
   updateCaustic();
   applyShading(gstate.activeScene, *shaderlib);
 
-  PostProcessor::doPostProcessing(render_out_color);
+  PostProcessor::doPostProcessing(render_out_color, deferred_buffers.depthBuffer);
 }
 
 // This function is aweful and I hate it.

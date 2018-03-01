@@ -19,12 +19,13 @@ void main(){
 	float depthValue = vec4(texture(depthBufTex, NDC).rgb, 1).r;
 	color = mix(texture(tex, NDC), texture(blurredTex, NDC), linearizeDepth(depthValue));
 	
+	///////////////////////////////////////////
+	// TODO remove after this testing works	
 	float depth = texture(depthBufTex, NDC).r;
 	float linDepth = linearizeDepth(depth);
-
-	// TODO remove after this testing works
 	color.r = depth;
 	color.g = linDepth;
 	color.b = sin(linDepth * 3.1415 * 2.0);
 	color.a = 1.0;
+	///////////////////////////////////////////
 }
