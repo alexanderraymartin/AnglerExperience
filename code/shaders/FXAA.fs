@@ -39,7 +39,7 @@ void main()
 	vec4 fullimage = texture(pixtex, NDC);
 	vec3 image = fullimage.rgb;
 
-	vec3 rgbC  = texture2D(pixtex, NDC).rgb; // Center
+	vec3 rgbC  = texture(pixtex, NDC).rgb; // Center
 
 	float lumaC  = luma(rgbC);
 	float lumaN  = luma(textureOffset(pixtex, NDC, NORTH).rgb);

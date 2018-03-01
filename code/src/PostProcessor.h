@@ -14,7 +14,6 @@
 
 #define POSTPROCESSOR_BUFFER_COUNT 2
 #define BLOOM_BLUR_AMOUNT 2
-#define DEPTH_OF_FIELD_BLUR_AMOUNT 3
 
 namespace PostProcessor{
 
