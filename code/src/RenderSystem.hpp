@@ -28,6 +28,7 @@ namespace RenderSystem{
   static GLuint render_out_color;
   static Program* deferred_export = NULL;
   static Program* deferred_uber = NULL;
+  static Program* deferred_shadow = NULL;
 
   static ShaderLibrary* shaderlib = NULL;
   
@@ -58,6 +59,9 @@ namespace RenderSystem{
   static string causticDir;
   static std::shared_ptr<Texture> caustics[CAUSTIC_COUNT];
 
+  static GLuint shadowFramebuffer;
+  static GLuint shadowTexture;
+
   void init(ApplicationState &appstate);
 
   void render(ApplicationState &appstate, GameState &gstate, double elapsedTime);
@@ -66,9 +70,9 @@ namespace RenderSystem{
 
   void applyShading(Scene* scene, ShaderLibrary &shaderlib);
 
-  void drawEntities(Scene* scene);
+  void drawEntities(Scene* scene, Program* shader);
 
-  void drawEntity(const Entity* entity);
+  void drawEntity(const Entity* entity, Program* shader);
 
   void runFXAA();
 
@@ -76,11 +80,16 @@ namespace RenderSystem{
 
   void initDepthUniforms();
 
-  void initDepthUniforms();
+  void initDepthUniforms(double orthoSize, double aspectRatio);
 
   void initCaustics();
 
   void updateCaustic();
+
+
+  void initShadowMap(int width, int height);
+
+  void setShadowMap();
 
 };
 

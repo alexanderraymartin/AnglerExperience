@@ -41,14 +41,19 @@ void RenderSystem::init(ApplicationState &appstate){
 
   deferred_export = shaderlib->getPtr("deferred-export");
   deferred_uber = shaderlib->getPtr("deferred-uber");
+  deferred_shadow = shaderlib->getPtr("deferred-shadow");
+  deferred_shadow->setVerbose(false);
 
+  glEnable(GL_DEPTH_TEST);
   glDisable(GL_BLEND);
 
   initDeferredBuffers(w_width, w_height, deferred_buffers);
 
   initOutputFBO(&render_out_FBO, &render_out_color, w_width, w_height, GL_LINEAR);
 
+  initDepthUniforms(1, 1);
   initCaustics();
+  initShadowMap(w_width, w_height);
 
   PostProcessor::init(w_width, w_height, shaderlib);
 }
@@ -64,10 +69,16 @@ void RenderSystem::render(ApplicationState &appstate, GameState &gstate, double 
   MVP.V = MatrixStack(camera->getView());
 
   prepareDeferred(deferred_buffers.gBuffer);
-  drawEntities(gstate.activeScene);
+  drawEntities(gstate.activeScene, deferred_export);
+
+  prepareDeferred(shadowFramebuffer);
+  drawEntities(gstate.activeScene, deferred_shadow);
+
+  setShadowMap();
   updateLighting(gstate.activeScene);
   updateCaustic();
   applyShading(gstate.activeScene, *shaderlib);
+
 
   PostProcessor::doPostProcessing(render_out_color, 0);
 }
@@ -134,13 +145,13 @@ void RenderSystem::onResize(GLFWwindow *window, int width, int height){
 // It may be possible to move some parts of this into one or more libraries. 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
-void RenderSystem::drawEntities(Scene* scene){
+void RenderSystem::drawEntities(Scene* scene, Program* shader){
   for(pair<const Entity*, Entity*> entpair : scene->entities){
-    drawEntity(entpair.second);
+    drawEntity(entpair.second, shader);
   }
 }
 
-void RenderSystem::drawEntity(const Entity* entity){
+void RenderSystem::drawEntity(const Entity* entity, Program* shader){
   SolidMesh* mesh = NULL;
   Pose* pose = NULL;
   for(Component *cmpnt : entity->components){
@@ -151,8 +162,8 @@ void RenderSystem::drawEntity(const Entity* entity){
       MVP.M.pushMatrix();
       MVP.M.multMatrix(pose->getAffineMatrix());
       for(Geometry &geo : mesh->geometries){
-        shaderlib->fastActivate(deferred_export);
-        drawGeometry(geo, MVP, deferred_export);
+        shaderlib->fastActivate(shader);
+        drawGeometry(geo, MVP, shader);
       }
       MVP.M.popMatrix();
       mesh = NULL;
@@ -162,8 +173,8 @@ void RenderSystem::drawEntity(const Entity* entity){
   }
   if(mesh){
     for(Geometry &geo : mesh->geometries){
-      shaderlib->fastActivate(deferred_export);
-      drawGeometry(geo, MVP, deferred_export);
+      shaderlib->fastActivate(shader);
+      drawGeometry(geo, MVP, shader);
     }
   }
 }
@@ -313,16 +324,24 @@ void RenderSystem::initCaustics() {
         caustics[i]->setUnit(deferred_buffers.buffers.size() + i);
         caustics[i]->setWrapModes(GL_REPEAT, GL_REPEAT);
     }
-
-    initDepthUniforms();
 }
 
-void RenderSystem::initDepthUniforms() {
-    VPB.V.lookAt(vec3(-2.0,10.0,0.0), vec3(0.0,0.0,0.0), vec3(0.0,-1.0,0.0));
-    VPB.P.ortho(-10, 10, -10, 10, 0, 100);
+void RenderSystem::initDepthUniforms(double orthoSize, double aspectRatio) {
+    //VPB.V.lookAt(vec3(-2.0,10.0,0.0), vec3(0.0,0.0,0.0), vec3(0.0,-1.0,0.0));
+    //VPB.P.ortho(-10, 10, -10, 10, 0, 100);
+    //VPB.B.loadIdentity();
+    //// VPB.B.translate(vec3(0.5, 0.5, 0.5));
+    //VPB.B.scale(vec3(1.0, 7.5, 1.0));
+
+    //VPB.V.lookAt(vec3(0.0, 3.4, 0.0), vec3(0.0, 3.1, 3.0), vec3(0,-1,0));
+    //VPB.V.lookAt(vec3(0.0, 10, 5.0), vec3(0, 2.5, 10), vec3(0,-1,0));
+
+    //VPB.V.lookAt(vec3(0.0, 5, 5.0), vec3(0, 2.5, 10), vec3(0,-1,0));
+    VPB.V.lookAt(vec3(0, 10, 0), vec3(0, 2.5, 10), vec3(0,-1,0));
+    VPB.P.ortho(-orthoSize * aspectRatio, orthoSize * aspectRatio, -orthoSize, orthoSize, 0.01, 100.0);
     VPB.B.loadIdentity();
-    // VPB.B.translate(vec3(0.5, 0.5, 0.5));
-    VPB.B.scale(vec3(1.0, 7.5, 1.0));
+    VPB.B.translate(vec3(0.5, 0.5, 0.5));
+    VPB.B.scale(0.5);
 
     deferred_uber->bind();
 
@@ -332,6 +351,12 @@ void RenderSystem::initDepthUniforms() {
 
     deferred_uber->unbind();
 
+  deferred_shadow->bind();
+
+  glUniformMatrix4fv(deferred_shadow->getUniform("depthV"), 1, GL_FALSE, value_ptr(VPB.V.topMatrix()));
+  glUniformMatrix4fv(deferred_shadow->getUniform("depthP"), 1, GL_FALSE, value_ptr(VPB.P.topMatrix()));
+
+  deferred_shadow->unbind();
 }
 
 void RenderSystem::updateCaustic() {
@@ -340,3 +365,37 @@ void RenderSystem::updateCaustic() {
     currCaustic = ++currCaustic >= CAUSTIC_COUNT ? 0 : currCaustic;
 }
 
+void RenderSystem::initShadowMap(int width, int height) {
+  glGenFramebuffers(1, &shadowFramebuffer);
+  glBindFramebuffer(GL_FRAMEBUFFER, shadowFramebuffer);
+
+  // Depth texture. Slower than a depth buffer, but you can sample it later in your shader
+  glGenTextures(1, &shadowTexture);
+  glBindTexture(GL_TEXTURE_2D, shadowTexture);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT16, width, height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+
+  GLfloat color[4]={1,1,1,1};
+  glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, color);
+
+  glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, shadowTexture, 0);
+
+  glDrawBuffer(GL_NONE); // No color buffer is drawn to.
+
+  // Always check that our framebuffer is ok
+  if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+    exit(0);
+}
+
+void RenderSystem::setShadowMap() {
+  deferred_uber->bind();
+
+  glActiveTexture(GL_TEXTURE0 + (deferred_buffers.buffers.size() + CAUSTIC_COUNT));
+  glBindTexture(GL_TEXTURE_2D, shadowTexture);
+  glUniform1i(deferred_uber->getUniform("shadowMap"), (deferred_buffers.buffers.size() + CAUSTIC_COUNT));
+
+  deferred_uber->unbind();
+}
