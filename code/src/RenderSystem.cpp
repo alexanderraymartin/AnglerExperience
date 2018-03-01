@@ -172,7 +172,7 @@ static void drawGeometry(const Geometry &geomcomp, RenderSystem::MVPset &MVP, Pr
   int h_pos, h_nor, h_tex;
   h_pos = h_nor = h_tex = -1;
 
-  geomcomp.material.apply();
+  geomcomp.material.apply(shader);
 
   glUniformMatrix4fv(shader->getUniform("M"), 1, GL_FALSE, value_ptr(MVP.M.topMatrix()));
   glUniformMatrix4fv(shader->getUniform("V"), 1, GL_FALSE, value_ptr(MVP.V.topMatrix()));
