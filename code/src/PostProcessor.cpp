@@ -169,11 +169,13 @@ static void applyDepthOfFieldCombine(GLuint tex, GLuint blurredTex, GLuint depth
 	glBindTexture(GL_TEXTURE_2D, tex);
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, blurredTex);
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, depthBuffer);
 
 	prog->bind();
 	glUniform1i(prog->getUniform("tex"), 0);
 	glUniform1i(prog->getUniform("blurredTex"), 1);
-	glUniform1i(prog->getUniform("depthBufTex"), depthBuffer);
+	glUniform1i(prog->getUniform("depthBufTex"), 2);
 	PostProcessor::drawFSQuad();
 	prog->unbind();
 }
