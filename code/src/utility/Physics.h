@@ -1,7 +1,7 @@
 #pragma once
 #ifndef PHYSICS_H_
 
-#include "SimpleComponents.hpp"
+#include "Components/SimpleComponents.hpp"
 #include <GLFW/glfw3.h>
 
 class witcherCamera : Camera {
