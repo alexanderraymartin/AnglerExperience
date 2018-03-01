@@ -37,22 +37,23 @@ using namespace glm;
 class Material : public Component{
  public:
   Material() {}
-  Material(const json &matjson, ShaderLibrary &shaderlib);
-  Material(Program* shader);
-  Material(const string &shadername) : shadername(shadername) {}
-  Material(const json &matjson, Program* shader);
-  Material(const string &path, ShaderLibrary &shaderlib);
-  Material(const char* path, ShaderLibrary &shaderlib) : Material(string(path), shaderlib) {}
+  Material(const json &matjson);
+  Material(const string &path);
+  Material(const char* path) : Material(string(path)) {}
 
 
   void setIntProp(const string &keyword, int prop);
   void setFloatProp(const string &keyword, float prop);
+  void setBoolProp(const string &keyword, bool prop);
   void setVec2Prop(const string &keyword,const vec2 &prop);
   void setVec3Prop(const string &keyword,const vec3 &prop);
   void setVec4Prop(const string &keyword,const vec4 &prop);
   void setMat2Prop(const string &keyword,const mat2 &prop);
   void setMat3Prop(const string &keyword,const mat3 &prop);
   void setMat4Prop(const string &keyword,const mat4 &prop);
+
+  void setCheckFirst(bool checkFirst);
+  bool getCheckFirst();
 
   // int getIntProp(const string &keyword);
   // float getFloatProp(const string &keyword);
@@ -63,21 +64,17 @@ class Material : public Component{
   // mat3 getMat3Prop(const string &keyword);
   // mat4 getMat4Prop(const string &keyword);
 
-  void apply() const;
+  void apply(Program* shader) const;
 
   void exportJSON(ostream &outstream) const;
 
   // If true the RenderSystem should check if the shader has a uniform before attempting to set it
   // This simply serves as a way to reduce warnings from OpenGL
-  bool checkShaderFirst = true;
-
-  string shadername;
-  Program* shader = NULL;
-
  protected:
   enum TypeEnum{
     Prop_Type_Int = 1,
     Prop_Type_Float = 0x0F, // 15
+    Prop_Type_Bool = 0x0B,
     Prop_Type_Vec2 = 0x02,  // 2
     Prop_Type_Vec3 = 0x03,  // 3
     Prop_Type_Vec4 = 0x04,  // 4
@@ -86,9 +83,10 @@ class Material : public Component{
     Prop_Type_Mat4 = 0x40   // 64
   };
 
-  void applyIndividual(const string &key, const json &value, Material::TypeEnum type) const;
+  bool checkShaderFirst = true;
 
-  void resolveShader(ShaderLibrary &shaderlib);
+  void applyIndividual(const string &key, const json &value, Material::TypeEnum type, Program* shader) const;
+
   void loadFromJSON(const json &matjson);
 
   json internalMaterial;

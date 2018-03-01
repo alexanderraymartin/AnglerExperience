@@ -15,6 +15,7 @@ public:
   Timeline();
   void setSource(T (*timeSource)());
   T getTime();
+  T get() {return(getTime());}
   T elapsed();
   T reset();
   void pause();

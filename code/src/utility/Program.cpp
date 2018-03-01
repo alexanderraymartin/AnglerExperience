@@ -153,24 +153,6 @@ bool Program::buildFromJsonArray(const json &program_obj){
 
   GLSL::checkError(GET_FILE_LINE);
 
-  // Put uniform and attribute locations into the map now instead of later
-  /*for(auto &attr : prog_attributes){
-    GLint id = GLSL::getAttribLocation(pid, attr, verbose);
-    if(id < 0 && verbose){
-      fprintf(stderr, "Attribute %s could not be found!\n", attr);
-    }else if(id >= 0){
-      attributes[attr] = id;
-    }
-  }
-  for(auto &unif : prog_uniforms){
-    GLint id = GLSL::getUniformLocation(pid, unif, verbose);
-    if(id < 0 && verbose){
-      fprintf(stderr, "Attribute %s could not be found!\n", unif);
-    }else if(id >= 0){
-      uniforms[unif] = id;
-    }
-  }*/
-
   return(true);
 }
 
@@ -201,7 +183,6 @@ GLint Program::getAttribute(const string &name)
   }else{
     return attr->second;
   }
-  
 }
 
 GLint Program::getUniform(const string &name)
@@ -220,5 +201,35 @@ GLint Program::getUniform(const string &name)
     }
   }else{
     return unif->second;
+  }
+}
+
+bool Program::hasAttribute(const string &name){
+  unordered_map<string,GLint>::const_iterator attr = attributes.find(name.c_str());
+  if(attr == attributes.end()) {
+    GLint id = GLSL::getAttribLocation(pid, name.c_str(), verbose);
+    if(id < 0){
+      return(false);
+    }else{
+      attributes[name] = id;
+      return(true);
+    }
+  }else{
+    return(true);
+  }
+}
+
+bool Program::hasUniform(const string &name){
+  unordered_map<string,GLint>::const_iterator unif = uniforms.find(name.c_str());
+  if(unif == uniforms.end()) {
+    GLint id = GLSL::getUniformLocation(pid, name.c_str(), verbose);
+    if(id < 0){
+      return(false);
+    }else{
+      uniforms[name] = id;
+      return(true);
+    }
+  }else{
+    return(true);
   }
 }
