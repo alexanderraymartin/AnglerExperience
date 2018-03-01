@@ -312,44 +312,43 @@ static void initOutputFBO(GLuint* outFBO, GLuint* outColor, int w_width, int w_h
 
 void RenderSystem::initCaustics() {
 
-    causticDir = "" STRIFY(ASSET_DIR) "/caustics";
+  causticDir = "" STRIFY(ASSET_DIR) "/caustics";
 
-    for (int i = 0; i < CAUSTIC_COUNT; i++) {
-        char filename[80];
-        sprintf(filename, "/caustic%02d.jpg", i + 1);
+  for (int i = 0; i < CAUSTIC_COUNT; i++) {
+      char filename[80];
+      sprintf(filename, "/caustic%02d.jpg", i + 1);
 
-        caustics[i] = make_shared<Texture>();
-        caustics[i]->setFilename(causticDir + filename);
-        caustics[i]->init();
-        caustics[i]->setUnit(deferred_buffers.buffers.size() + i);
-        caustics[i]->setWrapModes(GL_REPEAT, GL_REPEAT);
-    }
+      caustics[i] = make_shared<Texture>();
+      caustics[i]->setFilename(causticDir + filename);
+      caustics[i]->init();
+      caustics[i]->setUnit(deferred_buffers.buffers.size() + i);
+      caustics[i]->setWrapModes(GL_REPEAT, GL_REPEAT);
+  }
 }
 
 void RenderSystem::initDepthUniforms(double orthoSize, double aspectRatio) {
-    //VPB.V.lookAt(vec3(-2.0,10.0,0.0), vec3(0.0,0.0,0.0), vec3(0.0,-1.0,0.0));
-    //VPB.P.ortho(-10, 10, -10, 10, 0, 100);
-    //VPB.B.loadIdentity();
-    //// VPB.B.translate(vec3(0.5, 0.5, 0.5));
-    //VPB.B.scale(vec3(1.0, 7.5, 1.0));
+  //VPB.V.lookAt(vec3(-2.0,10.0,0.0), vec3(0.0,0.0,0.0), vec3(0.0,-1.0,0.0));
+  //VPB.P.ortho(-10, 10, -10, 10, 0, 100);
+  //VPB.B.loadIdentity();
+  //// VPB.B.translate(vec3(0.5, 0.5, 0.5));
+  //VPB.B.scale(vec3(1.0, 7.5, 1.0));
 
-    //VPB.V.lookAt(vec3(0.0, 3.4, 0.0), vec3(0.0, 3.1, 3.0), vec3(0,-1,0));
-    //VPB.V.lookAt(vec3(0.0, 10, 5.0), vec3(0, 2.5, 10), vec3(0,-1,0));
+  //VPB.V.lookAt(vec3(0.0, 3.4, 0.0), vec3(0.0, 3.1, 3.0), vec3(0,-1,0));
+  //VPB.V.lookAt(vec3(0.0, 10, 5.0), vec3(0, 2.5, 10), vec3(0,-1,0));
+  //VPB.V.lookAt(vec3(0.0, 5, 5.0), vec3(0, 2.5, 10), vec3(0,-1,0));
+  VPB.V.lookAt(vec3(0, 10, 0), vec3(0, 2.5, 10), vec3(0,-1,0));
+  VPB.P.ortho(-orthoSize * aspectRatio, orthoSize * aspectRatio, -orthoSize, orthoSize, 0.01, 100.0);
+  VPB.B.loadIdentity();
+  VPB.B.translate(vec3(0.5, 0.5, 0.5));
+  VPB.B.scale(0.5);
 
-    //VPB.V.lookAt(vec3(0.0, 5, 5.0), vec3(0, 2.5, 10), vec3(0,-1,0));
-    VPB.V.lookAt(vec3(0, 10, 0), vec3(0, 2.5, 10), vec3(0,-1,0));
-    VPB.P.ortho(-orthoSize * aspectRatio, orthoSize * aspectRatio, -orthoSize, orthoSize, 0.01, 100.0);
-    VPB.B.loadIdentity();
-    VPB.B.translate(vec3(0.5, 0.5, 0.5));
-    VPB.B.scale(0.5);
+  deferred_uber->bind();
 
-    deferred_uber->bind();
+  glUniformMatrix4fv(deferred_uber->getUniform("depthV"), 1, GL_FALSE, value_ptr(VPB.V.topMatrix()));
+  glUniformMatrix4fv(deferred_uber->getUniform("depthP"), 1, GL_FALSE, value_ptr(VPB.P.topMatrix()));
+  glUniformMatrix4fv(deferred_uber->getUniform("depthB"), 1, GL_FALSE, value_ptr(VPB.B.topMatrix()));
 
-    glUniformMatrix4fv(deferred_uber->getUniform("depthV"), 1, GL_FALSE, value_ptr(VPB.V.topMatrix()));
-    glUniformMatrix4fv(deferred_uber->getUniform("depthP"), 1, GL_FALSE, value_ptr(VPB.P.topMatrix()));
-    glUniformMatrix4fv(deferred_uber->getUniform("depthB"), 1, GL_FALSE, value_ptr(VPB.B.topMatrix()));
-
-    deferred_uber->unbind();
+  deferred_uber->unbind();
 
   deferred_shadow->bind();
 
@@ -360,9 +359,8 @@ void RenderSystem::initDepthUniforms(double orthoSize, double aspectRatio) {
 }
 
 void RenderSystem::updateCaustic() {
-
-    caustics[currCaustic]->bind(deferred_uber->getUniform("caustic"));
-    currCaustic = ++currCaustic >= CAUSTIC_COUNT ? 0 : currCaustic;
+  caustics[currCaustic]->bind(deferred_uber->getUniform("caustic"));
+  currCaustic = ++currCaustic >= CAUSTIC_COUNT ? 0 : currCaustic;
 }
 
 void RenderSystem::initShadowMap(int width, int height) {
