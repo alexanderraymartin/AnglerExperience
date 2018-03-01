@@ -241,7 +241,7 @@ static void initScene(ApplicationState &appstate, GameState &gstate){
   {
     groundplane = new Entity();
 
-    Material mat("" STRIFY(ASSET_DIR) "/simple-phong.mat", appstate.resources.shaderlib);
+    Material mat("" STRIFY(ASSET_DIR) "/simple-phong.mat");
 
     vector<Geometry> cubegeo;
     Geometry::loadFullObj( "" STRIFY(ASSET_DIR) "/cube.obj", cubegeo);
