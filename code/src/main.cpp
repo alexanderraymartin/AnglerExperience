@@ -75,7 +75,7 @@ int main(int argc, char** argv){
   initLibs(appstate.resources); // Can be split up in needed
   initGL();
   initShaders(appstate);
-  dynamicCamera* camera = new dynamicCamera();
+  DynamicCamera* camera = new DynamicCamera();
   initScene(appstate, gstate, camera);
 
   RenderSystem::init(appstate);

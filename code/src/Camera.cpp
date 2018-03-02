@@ -4,7 +4,7 @@
 using namespace glm;
 using namespace std;
 
-void dynamicCamera::update(GLFWwindow* window, float dt) {
+void DynamicCamera::update(GLFWwindow* window, float dt) {
 	userForce = vec3(0.0f);
 	if (glfwGetKey(window, GLFW_KEY_W)) {
 		userForce += vec3(0.0f, INPUT_FORCE, 0.0f);
@@ -58,7 +58,7 @@ void dynamicCamera::update(GLFWwindow* window, float dt) {
 }
 
 //This currently is using linear springs, not angular, but it has the nice side effect of not bringing the view outside of a 180° hemisphere.
-void dynamicCamera::applyForces(float dt) {
+void DynamicCamera::applyForces(float dt) {
 	//F = -kx + bv
 	//k = spring constant, x = spring direction, b = spring friction, v = velocity
 	vec3 springForce = SPRING_CONSTANT * dirToCenter() - FRICTION_CONSTANT * velocity;
@@ -75,11 +75,11 @@ void dynamicCamera::applyForces(float dt) {
 	viewDirection = normalize(viewDirection);
 }
 
-glm::vec3 dynamicCamera::getViewDir() {
+glm::vec3 DynamicCamera::getViewDir() {
 	return viewDirection;
 }
 
-glm::mat4 dynamicCamera::getView() {
+glm::mat4 DynamicCamera::getView() {
 	return glm::lookAt(
 		defaultLocation, //Location of the camera
 		defaultLocation + viewDirection, //What to look at
@@ -87,10 +87,10 @@ glm::mat4 dynamicCamera::getView() {
 	);
 }
 
-glm::mat4 dynamicCamera::getPerspective(float aspect) {
+glm::mat4 DynamicCamera::getPerspective(float aspect) {
 	return(perspective(fov, aspect, near, far));
 }
 
-vec3 dynamicCamera::dirToCenter() {
+vec3 DynamicCamera::dirToCenter() {
 	return defaultRotation - viewDirection;
 }

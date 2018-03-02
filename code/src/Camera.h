@@ -6,7 +6,7 @@
 #include <glm/glm.hpp>
 #include <GLFW/glfw3.h>
 
-class dynamicCamera : public Camera {
+class DynamicCamera : public Camera {
 protected:
 	//The amount of force applied by the user, calculated in update based on keys pressed
 	glm::vec3 userForce;
@@ -40,18 +40,18 @@ protected:
 
 public:
 
-	dynamicCamera() : fov(40.0f), near(.01f), far(100.0f), viewDirection(defaultRotation) {}
+	DynamicCamera() : fov(40.0f), near(.01f), far(100.0f), viewDirection(defaultRotation) {}
 
-	dynamicCamera(float fov, float near, float far) : fov(fov), near(near), far(far), viewDirection(defaultRotation) {}
+	DynamicCamera(float fov, float near, float far) : fov(fov), near(near), far(far), viewDirection(defaultRotation) {}
 
 	//Returns the direction the camera is facing
-	glm::vec3 Camera::getViewDir();
+	glm::vec3 getViewDir();
 
 	//Returns the view matrix
-	glm::mat4 Camera::getView();
+	glm::mat4 getView();
 
 	//Returns the perspective matrix associated with the camera
-	glm::mat4 Camera::getPerspective(float aspect);
+	glm::mat4 getPerspective(float aspect);
 
 	//Updates the camera
 	void update(GLFWwindow* window, float dt);
