@@ -260,7 +260,30 @@ static void initScene(ApplicationState &appstate, GameState &gstate, Camera* cam
     groundplane->attach(pose);
   }
 
+  Entity* cube;
+  {
+    cube = new Entity();
+
+    Material mat("" STRIFY(ASSET_DIR) "/simple-phong.mat");
+
+    vector<Geometry> cubegeo;
+    Geometry::loadFullObj( "" STRIFY(ASSET_DIR) "/cube.obj", cubegeo);
+
+    SolidMesh* mesh = new SolidMesh(cubegeo);
+    mesh->setMaterial(mat);
+
+    Pose* pose = new Pose(glm::vec3(0, 3, 10));
+    pose->scale = glm::vec3(0.1, 0.1, 0.1);
+    pose->orient = glm::angleAxis(glm::radians(45.0f), glm::vec3(0, 1, 0));
+    cube->attach(mesh);
+    cube->attach(pose);
+  }
+
   gstate.activeScene->addEntity(groundplane);
+  gstate.activeScene->addEntity(cube);
+
+  gstate.activeScene->addEntity(sun);
+  gstate.activeScene->addEntity(pointlight);
 }
 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
