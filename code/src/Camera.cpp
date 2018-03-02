@@ -19,7 +19,7 @@ void dynamicCamera::update(GLFWwindow* window, float dt) {
 		userForce += vec3(-INPUT_FORCE, 0.0f, 0.0f);
 	}
 	if (userForce != vec3(0.0)) {
-		userForce = normalize(userForce);
+		userForce = normalize(userForce) * INPUT_FORCE;
 	}
 	/* Uncomment this for dynamic testing of physics variables
 	if (glfwGetKey(window, GLFW_KEY_1)) {
