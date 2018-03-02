@@ -1,78 +1,61 @@
 #pragma once
-#ifndef LAB476_CAMERA_INCLUDED
-#define LAB476_CAMERA_INCLUDED
+#ifndef CAMERA_H_
+#define CAMERA_H_
 
 #include "SimpleComponents.hpp"
+#include <glm/glm.hpp>
+#include <GLFW/glfw3.h>
 
-class witcherCamera : Camera {
-private:
+class dynamicCamera : public Camera {
+protected:
+	//The amount of force applied by the user, calculated in update based on keys pressed
+	glm::vec3 userForce;
+	//The direction the camera faces when the game begins
+	const glm::vec3 defaultRotation = normalize(glm::vec3(0.0f, 0.3f, 1.0f));
+	//The location of the camera when the game begins
+	const glm::vec3 defaultLocation = glm::vec3(0.0f, 3.4f, 0.0f);
+	//The direction the camera is facing
+	glm::vec3 viewDirection;
+	//The 3 angular velocities of the camera. Z can not change in our current implementation so the up-vector will not change.
+	glm::vec3 velocity;
 
-	//Variables for camera movement or utility
-	const float SENSITIVITY = 100.0f;
-	float posY = 300.0f;
-	const float VERT_ANGLE_LIMIT = cos(80 / 360 * 2 * pi);
-	const float pi = 3.14159265f;
-	const glm::vec3 yVec = glm::vec3(0, 1, 0);
-	float xRot, yRot;
+	//If you don't like these numbers, mess with them until you like them.
+	//The amount of force the user pushes with
+	float INPUT_FORCE = 1.0f;
+	//The amount of force the camera tries to reset with
+	float SPRING_CONSTANT = 2.0f;
+	//The amount of friction on the snapback force
+	float FRICTION_CONSTANT = 3.0f;
+	//The more mass, the slower all accelerations are.
+	float CAMERA_MASS = 1.0f;
+
+	float fov;
+	float near;
+	float far;
+
+	void applyForces(float dt);
+
+	glm::vec3 dirToCenter();
+
 
 public:
-	enum DIRECTION {
-		FORWARD, BACKWARD, LEFT, RIGHT
-	};
-	glm::vec3 position;
 
-	glm::vec3 direction;
-	witcherCamera() : fov(45.0), near(.01), far(100.0), pose(glm::vec3(0.0)), lookat(glm::vec3(0.0)), updir(glm::vec3(0.0, 1.0, 0.0)) {}
-	witcherCamera(double fov, const glm::vec3 &loc, const glm::vec3 &look) : fov(fov), near(.01), far(100.0), pose(loc), lookat(look), updir(glm::vec3(0.0, -1.0, 0.0)) {}
+	dynamicCamera() : fov(40.0f), near(.01f), far(100.0f), viewDirection(defaultRotation) {}
 
-	glm::vec3 getViewDir() { return(lookat - pose.loc); }
+	dynamicCamera(float fov, float near, float far) : fov(fov), near(near), far(far), viewDirection(defaultRotation) {}
 
-	//FIX THIS
-	glm::mat4 getView() {
-		return(glm::lookAt(
-			pose.loc,
-			lookat,
-			updir
-		));
-	}
+	//Returns the direction the camera is facing
+	glm::vec3 Camera::getViewDir();
 
-	glm::mat4 getPerspective(double aspect) {
-		return(glm::perspective(fov, aspect, near, far));
-	}
+	//Returns the view matrix
+	glm::mat4 Camera::getView();
 
-	double fov;
-	double near;
-	double far;
+	//Returns the perspective matrix associated with the camera
+	glm::mat4 Camera::getPerspective(float aspect);
 
-	Pose pose;
-	glm::vec3 lookat;
-	glm::vec3 updir;
+	//Updates the camera
+	void update(GLFWwindow* window, float dt);
 
-	//Sets camera direction based on cursor position
-	void setCamera() {
-		//FIX THIS
-
-		float theta = -(float)xRot;
-		float phi = (float)(yRot - posY);
-
-		if (VERT_ANGLE_LIMIT <= phi) {
-			posY = xRot - VERT_ANGLE_LIMIT;
-			phi = VERT_ANGLE_LIMIT;
-		}
-
-		if (-VERT_ANGLE_LIMIT >= phi) {
-			posY = yRot + VERT_ANGLE_LIMIT;
-			phi = -VERT_ANGLE_LIMIT;
-		}
-
-		float x, y, z;
-		x = sin(theta) * sin(phi + pi / 2);
-		y = cos(phi + pi / 2);
-		z = cos(theta) * sin(phi + pi / 2);
-		direction = glm::vec3(x, y, z);
-
-	}
 };
 
-
-#endif
+#endif // !CAMERA_H_
