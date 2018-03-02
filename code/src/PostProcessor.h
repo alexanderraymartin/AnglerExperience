@@ -13,8 +13,8 @@
 #define ABS(_X) (_X >= 0 ? _X : -_X)
 
 #define POSTPROCESSOR_BUFFER_COUNT 2
-#define BLOOM_BLUR_AMOUNT 1
-#define BLOOM_FBO_DOWN_SCALE 4
+#define BLOOM_BLUR_AMOUNT 3
+#define BLOOM_FBO_DOWN_SCALE 2
 #define DEPTH_OF_FIELD_BLUR_AMOUNT 3
 
 namespace PostProcessor{

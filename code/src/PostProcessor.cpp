@@ -29,8 +29,8 @@ void PostProcessor::init(int _w_width, int _w_height, ShaderLibrary* _shaderlib)
 void PostProcessor::doPostProcessing(GLuint texture, GLuint depthBuffer)
 {
   int lastout;
-  //lastout = processBloom(texture, false);
-  lastout = processDepthOfField(texture, depthBuffer, false);
+  lastout = processBloom(texture, false);
+  //lastout = processDepthOfField(texture, depthBuffer, false);
   //lastout = processDepthOfField(texBuf[lastout], depthBuffer, false);
   lastout = runFXAA(texBuf[lastout], true);
 }
