@@ -27,10 +27,10 @@ uniform vec3 sunDir;
 uniform vec3 viewPos;
 
 uniform sampler2D caustic;
+uniform sampler2D shadowMap;
 
-uniform mat4 depthV;
-uniform mat4 depthP;
-uniform mat4 depthB;
+uniform mat4 causticMatrix;
+uniform mat4 shadowMatrix;
 
 void main()
 {             
@@ -65,12 +65,21 @@ void main()
     lighting += (diffuse + specular) * attenuation;
   }
 
-  vec4 depthCoord = depthB * depthP * depthV * texture(gPosition, TexCoords);
-  vec4 caustColor = texture(caustic, depthCoord.xy) * INV(BackMask);
+  vec4 shadowCoord = shadowMatrix * texture(gPosition, TexCoords);
+  vec4 causticCoord = causticMatrix * texture(gPosition, TexCoords);
+
+  vec4 caustColor = texture(caustic, causticCoord.xy) * INV(BackMask);
+
+  float visibility = 1.0;
+  float bias = 0.005;
+
+  if ( texture( shadowMap, shadowCoord.xy ).x  <  shadowCoord.z - bias){
+    visibility = 0.25;
+  }
 
   lighting = mix(lighting, lighting*caustColor.rgb, caustColor.a) * INV(BackMask);
 
-  lighting = mix(lighting, BACKGROUND, BackMask);
+  lighting = mix(lighting, BACKGROUND, BackMask) * visibility;
   
   FragColor = vec4(lighting, 1.0);
 }
