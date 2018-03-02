@@ -13,8 +13,9 @@
 #define ABS(_X) (_X >= 0 ? _X : -_X)
 
 #define POSTPROCESSOR_BUFFER_COUNT 2
+#define POSTPROCESSOR_LOW_RES_BUFFER_COUNT 2
 #define BLOOM_BLUR_AMOUNT 3
-#define BLOOM_FBO_DOWN_SCALE 2
+#define LOW_RES_FBO_SCALE 2
 #define DEPTH_OF_FIELD_BLUR_AMOUNT 3
 
 namespace PostProcessor{
@@ -25,10 +26,16 @@ namespace PostProcessor{
   static GLuint quadVAO;
   static GLuint quadVBO;
 
+  // full screen buffers
   static GLuint frameBuf[POSTPROCESSOR_BUFFER_COUNT];
   static GLuint texBuf[POSTPROCESSOR_BUFFER_COUNT];
 
+  // lower resolution buffers
+  static GLuint lowResFrameBuf[POSTPROCESSOR_LOW_RES_BUFFER_COUNT];
+  static GLuint lowResTexBuf[POSTPROCESSOR_LOW_RES_BUFFER_COUNT];
+
   static UINT _nextFBO = 0;
+  static UINT _nextLowResFBO = 0;
 
   static ShaderLibrary* shaderlib = nullptr;
 
@@ -40,10 +47,12 @@ namespace PostProcessor{
   int processDepthOfField(GLuint texture, GLuint depthBuffer, bool isLast);
   void drawFSQuad();
 
+  static UINT nextLowResFBO() { return((_nextLowResFBO = ++_nextLowResFBO % POSTPROCESSOR_BUFFER_COUNT)); }
   static UINT nextFBO() {return((_nextFBO = ++_nextFBO % POSTPROCESSOR_BUFFER_COUNT));}
   static UINT lastFBO() {return(ABS(_nextFBO - 1) % POSTPROCESSOR_BUFFER_COUNT);}
   static UINT offsetFBO(int offset) {return(ABS(_nextFBO + offset) % POSTPROCESSOR_BUFFER_COUNT);}
   static void resize(int w_width, int w_height) {init(w_width, w_height, shaderlib);};
+
 }
 
 #endif

@@ -24,6 +24,14 @@ void PostProcessor::init(int _w_width, int _w_height, ShaderLibrary* _shaderlib)
   for(int i = 0; i < POSTPROCESSOR_BUFFER_COUNT; i++){
     createFBO(w_width, w_height, frameBuf[i], texBuf[i], GL_LINEAR, GL_CLAMP_TO_EDGE);
   }
+
+  // Bloom needs different sized frame buffers
+  glGenFramebuffers(2, lowResFrameBuf);
+  glGenTextures(2, lowResTexBuf);
+
+  for (int i = 0; i < POSTPROCESSOR_LOW_RES_BUFFER_COUNT; i++) {
+    createFBO(w_width / LOW_RES_FBO_SCALE, w_height / LOW_RES_FBO_SCALE, lowResFrameBuf[i], lowResTexBuf[i], GL_LINEAR, GL_CLAMP_TO_EDGE);
+  }
 }
 
 void PostProcessor::doPostProcessing(GLuint texture, GLuint depthBuffer)
@@ -38,32 +46,25 @@ void PostProcessor::doPostProcessing(GLuint texture, GLuint depthBuffer)
 int PostProcessor::processBloom(GLuint texture, bool isLast)
 {
   int fboID1 = nextFBO();
-  // Bloom needs different sized frame buffers
-  GLuint bloomFrameBuf[2];
-  GLuint bloomTexBuf[2];
-
-  glGenFramebuffers(2, bloomFrameBuf);
-  glGenTextures(2, bloomTexBuf);
-
-  createFBO(w_width / BLOOM_FBO_DOWN_SCALE, w_height / BLOOM_FBO_DOWN_SCALE, bloomFrameBuf[0], bloomTexBuf[0], GL_LINEAR, GL_CLAMP_TO_EDGE);
-  createFBO(w_width / BLOOM_FBO_DOWN_SCALE, w_height / BLOOM_FBO_DOWN_SCALE, bloomFrameBuf[1], bloomTexBuf[1], GL_LINEAR, GL_CLAMP_TO_EDGE);
-
+  int fboID2 = nextLowResFBO();
+  int fboID3 = nextLowResFBO();
+  
   // Bright filter
-  glViewport(0, 0, w_width / BLOOM_FBO_DOWN_SCALE, w_height / BLOOM_FBO_DOWN_SCALE);
-  applyShaderToTexture(texture, bloomFrameBuf[0], shaderlib->getPtr("bloom_brightFilter"));
+  glViewport(0, 0, w_width / LOW_RES_FBO_SCALE, w_height / LOW_RES_FBO_SCALE);
+  applyShaderToTexture(texture, lowResFrameBuf[fboID2], shaderlib->getPtr("bloom_brightFilter"));
 
   for (int i = 0; i < BLOOM_BLUR_AMOUNT; i++)
   {
     // Horizontal blur
-	applyShaderToTexture(bloomTexBuf[0], bloomFrameBuf[1], shaderlib->getPtr("bloom_horizontalBlur"));
+	applyShaderToTexture(lowResTexBuf[fboID2], lowResFrameBuf[fboID3], shaderlib->getPtr("bloom_horizontalBlur"));
     
     // Vertical blur
-	applyShaderToTexture(bloomTexBuf[1], bloomFrameBuf[0], shaderlib->getPtr("bloom_verticalBlur"));
+	applyShaderToTexture(lowResTexBuf[fboID3], lowResFrameBuf[fboID2], shaderlib->getPtr("bloom_verticalBlur"));
   }
 
   // Combine
   glViewport(0, 0, w_width, w_height);
-  applyBloomCombine(texture, bloomTexBuf[0], isLast ? 0 : frameBuf[fboID1], shaderlib->getPtr("bloom_combine"));
+  applyBloomCombine(texture, lowResTexBuf[fboID2], isLast ? 0 : frameBuf[fboID1], shaderlib->getPtr("bloom_combine"));
   ASSERT_NO_GLERR();
   return fboID1;
 }
