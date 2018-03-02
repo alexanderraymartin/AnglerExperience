@@ -14,6 +14,7 @@
 
 #define POSTPROCESSOR_BUFFER_COUNT 2
 #define POSTPROCESSOR_LOW_RES_BUFFER_COUNT 2
+
 #define BLOOM_BLUR_AMOUNT 3
 #define LOW_RES_FBO_SCALE 2
 #define DEPTH_OF_FIELD_BLUR_AMOUNT 3
@@ -47,10 +48,14 @@ namespace PostProcessor{
   int processDepthOfField(GLuint texture, GLuint depthBuffer, bool isLast);
   void drawFSQuad();
 
-  static UINT nextLowResFBO() { return((_nextLowResFBO = ++_nextLowResFBO % POSTPROCESSOR_BUFFER_COUNT)); }
+  static UINT nextLowResFBO() { return((_nextLowResFBO = ++_nextLowResFBO % POSTPROCESSOR_LOW_RES_BUFFER_COUNT)); }
+  static UINT lastLowResFBO() { return(ABS(_nextLowResFBO - 1) % POSTPROCESSOR_LOW_RES_BUFFER_COUNT); }
+  static UINT offsetLowResFBO(int offset) { return(ABS(_nextLowResFBO + offset) % POSTPROCESSOR_LOW_RES_BUFFER_COUNT); }
+
   static UINT nextFBO() {return((_nextFBO = ++_nextFBO % POSTPROCESSOR_BUFFER_COUNT));}
   static UINT lastFBO() {return(ABS(_nextFBO - 1) % POSTPROCESSOR_BUFFER_COUNT);}
   static UINT offsetFBO(int offset) {return(ABS(_nextFBO + offset) % POSTPROCESSOR_BUFFER_COUNT);}
+
   static void resize(int w_width, int w_height) {init(w_width, w_height, shaderlib);};
 
 }

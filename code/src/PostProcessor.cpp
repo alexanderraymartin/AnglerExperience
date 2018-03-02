@@ -17,7 +17,7 @@ void PostProcessor::init(int _w_width, int _w_height, ShaderLibrary* _shaderlib)
 
   initQuad(quadVAO, quadVBO);
 
-  //create three frame buffer objects to toggle between
+  // Create full resolution buffers
   glGenFramebuffers(POSTPROCESSOR_BUFFER_COUNT, frameBuf);
   glGenTextures(POSTPROCESSOR_BUFFER_COUNT, texBuf);
 
@@ -25,7 +25,7 @@ void PostProcessor::init(int _w_width, int _w_height, ShaderLibrary* _shaderlib)
     createFBO(w_width, w_height, frameBuf[i], texBuf[i], GL_LINEAR, GL_CLAMP_TO_EDGE);
   }
 
-  // Bloom needs different sized frame buffers
+  // Create low resolution buffers
   glGenFramebuffers(2, lowResFrameBuf);
   glGenTextures(2, lowResTexBuf);
 
