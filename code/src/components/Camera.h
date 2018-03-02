@@ -11,7 +11,7 @@ protected:
 	//The amount of force applied by the user, calculated in update based on keys pressed
 	glm::vec3 userForce;
 	//The direction the camera faces when the game begins
-	const glm::vec3 defaultRotation = normalize(glm::vec3(0.0f, 0.3f, 1.0f));
+	const glm::vec3 defaultRotation = normalize(glm::vec3(0.0f, 0.0f, 1.0f));
 	//The location of the camera when the game begins
 	const glm::vec3 defaultLocation = glm::vec3(0.0f, 3.4f, 0.0f);
 	//The direction the camera is facing
@@ -40,9 +40,9 @@ protected:
 
 public:
 
-	DynamicCamera() : fov((70 * 3.14159265f) / 180), near(.01f), far(100.0f), viewDirection(defaultRotation) {}
+	DynamicCamera() : fov(35.0), near(.01f), far(100.0f), viewDirection(defaultRotation) {}
 
-	DynamicCamera(float fov, float near, float far) : fov((fov * 3.14159265) / 180), near(near), far(far), viewDirection(defaultRotation) {}
+	DynamicCamera(float fov, float near, float far) : fov(fov), near(near), far(far), viewDirection(defaultRotation) {}
 
 	//Returns the direction the camera is facing
 	glm::vec3 getViewDir();

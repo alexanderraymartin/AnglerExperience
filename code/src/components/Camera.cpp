@@ -43,7 +43,7 @@ void DynamicCamera::update(GLFWwindow* window, float dt) {
 		cout << "Input force: " << INPUT_FORCE << "\n";
 	}
 	if (glfwGetKey(window, GLFW_KEY_X)) {
-		SPRING_CONSTANT -= 1.0f;
+		SPRING_CONSTANT -= 1.0f;y
 		cout << "Spring constant: " << SPRING_CONSTANT << "\n";
 	}
 	if (glfwGetKey(window, GLFW_KEY_C)) {
@@ -88,7 +88,7 @@ glm::mat4 DynamicCamera::getView() {
 }
 
 glm::mat4 DynamicCamera::getPerspective(float aspect) {
-	return(perspective(fov, aspect, near, far));
+	return(perspective(glm::radians(fov), aspect, near, far));
 }
 
 vec3 DynamicCamera::dirToCenter() {

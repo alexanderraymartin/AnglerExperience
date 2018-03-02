@@ -67,7 +67,7 @@ class StaticCamera : public Camera{
   }
 
   glm::mat4 getPerspective(float aspect){
-    return(glm::perspective(fov, aspect, near, far));
+    return(glm::perspective(glm::radians(fov), aspect, near, far));
   }
 
   float fov;
