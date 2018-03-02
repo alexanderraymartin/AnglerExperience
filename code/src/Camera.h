@@ -40,9 +40,9 @@ protected:
 
 public:
 
-	DynamicCamera() : fov(40.0f), near(.01f), far(100.0f), viewDirection(defaultRotation) {}
+	DynamicCamera() : fov((70 * 3.14159265f) / 180), near(.01f), far(100.0f), viewDirection(defaultRotation) {}
 
-	DynamicCamera(float fov, float near, float far) : fov(fov), near(near), far(far), viewDirection(defaultRotation) {}
+	DynamicCamera(float fov, float near, float far) : fov((fov * 3.14159265) / 180), near(near), far(far), viewDirection(defaultRotation) {}
 
 	//Returns the direction the camera is facing
 	glm::vec3 getViewDir();
