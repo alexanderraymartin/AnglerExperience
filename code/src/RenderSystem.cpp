@@ -39,14 +39,19 @@ void RenderSystem::init(ApplicationState &appstate){
 
   deferred_export = shaderlib->getPtr("deferred-export");
   deferred_uber = shaderlib->getPtr("deferred-uber");
+  deferred_shadow = shaderlib->getPtr("deferred-shadow");
+  deferred_shadow->setVerbose(false);
 
+  glEnable(GL_DEPTH_TEST);
   glDisable(GL_BLEND);
 
   initDeferredBuffers(w_width, w_height, deferred_buffers);
 
   initOutputFBO(&render_out_FBO, &render_out_color, w_width, w_height, GL_LINEAR);
 
+  initDepthUniforms(1, 10);
   initCaustics();
+  initShadowMap(w_width, w_height);
 
   PostProcessor::init(w_width, w_height, shaderlib);
 }
@@ -62,8 +67,15 @@ void RenderSystem::render(ApplicationState &appstate, GameState &gstate, double 
   MVP.V = MatrixStack(camera->getView());
 
   prepareDeferred(deferred_buffers.gBuffer);
-  drawEntities(gstate.activeScene);
+  drawEntities(gstate.activeScene, deferred_export);
+
   updateLighting(gstate.activeScene);
+  updateDepthUniforms();
+
+  prepareDeferred(shadowFramebuffer);
+  drawEntities(gstate.activeScene, deferred_shadow);
+
+  updateShadowMap();
   updateCaustic();
   applyShading(gstate.activeScene, *shaderlib);
 
@@ -96,6 +108,11 @@ void RenderSystem::updateLighting(Scene* scene){
         SunLight* sun = static_cast<SunLight*>(cmpnt);
         glUniform3fv(deferred_uber->getUniform("sunCol"), 1, value_ptr(sun->color));
         glUniform3fv(deferred_uber->getUniform("sunDir"), 1, value_ptr(sun->direction));
+
+        vec3 lightPos = vec3(0, 10, 0);
+        depthSet.lightView.loadIdentity();
+        depthSet.lightView.lookAt(lightPos, lightPos + sun->direction, vec3(0,1,0));
+
       }else if(ptcomp && pose){
         // This would be a great place to implement DOD
         snprintf(colid, baselen[0], colbase, lightnum);
@@ -132,13 +149,13 @@ void RenderSystem::onResize(GLFWwindow *window, int width, int height){
 // It may be possible to move some parts of this into one or more libraries. 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
-void RenderSystem::drawEntities(Scene* scene){
+void RenderSystem::drawEntities(Scene* scene, Program* shader){
   for(pair<const Entity*, Entity*> entpair : scene->entities){
-    drawEntity(entpair.second);
+    drawEntity(entpair.second, shader);
   }
 }
 
-void RenderSystem::drawEntity(const Entity* entity){
+void RenderSystem::drawEntity(const Entity* entity, Program* shader){
   SolidMesh* mesh = NULL;
   Pose* pose = NULL;
   for(Component *cmpnt : entity->components){
@@ -149,8 +166,8 @@ void RenderSystem::drawEntity(const Entity* entity){
       MVP.M.pushMatrix();
       MVP.M.multMatrix(pose->getAffineMatrix());
       for(Geometry &geo : mesh->geometries){
-        shaderlib->fastActivate(deferred_export);
-        drawGeometry(geo, MVP, deferred_export);
+        shaderlib->fastActivate(shader);
+        drawGeometry(geo, MVP, shader);
       }
       MVP.M.popMatrix();
       mesh = NULL;
@@ -160,8 +177,8 @@ void RenderSystem::drawEntity(const Entity* entity){
   }
   if(mesh){
     for(Geometry &geo : mesh->geometries){
-      shaderlib->fastActivate(deferred_export);
-      drawGeometry(geo, MVP, deferred_export);
+      shaderlib->fastActivate(shader);
+      drawGeometry(geo, MVP, shader);
     }
   }
 }
@@ -170,7 +187,7 @@ static void drawGeometry(const Geometry &geomcomp, RenderSystem::MVPset &MVP, Pr
   int h_pos, h_nor, h_tex;
   h_pos = h_nor = h_tex = -1;
 
-  geomcomp.material.apply();
+  geomcomp.material.apply(shader);
 
   glUniformMatrix4fv(shader->getUniform("M"), 1, GL_FALSE, value_ptr(MVP.M.topMatrix()));
   glUniformMatrix4fv(shader->getUniform("V"), 1, GL_FALSE, value_ptr(MVP.V.topMatrix()));
@@ -299,42 +316,89 @@ static void initOutputFBO(GLuint* outFBO, GLuint* outColor, int w_width, int w_h
 
 void RenderSystem::initCaustics() {
 
-    causticDir = "" STRIFY(ASSET_DIR) "/caustics";
+  causticDir = "" STRIFY(ASSET_DIR) "/caustics";
 
-    for (int i = 0; i < CAUSTIC_COUNT; i++) {
-        char filename[80];
-        sprintf(filename, "/caustic%02d.jpg", i + 1);
+  for (int i = 0; i < CAUSTIC_COUNT; i++) {
+      char filename[80];
+      sprintf(filename, "/caustic%02d.jpg", i + 1);
 
-        caustics[i] = make_shared<Texture>();
-        caustics[i]->setFilename(causticDir + filename);
-        caustics[i]->init();
-        caustics[i]->setUnit(deferred_buffers.buffers.size() + i);
-        caustics[i]->setWrapModes(GL_REPEAT, GL_REPEAT);
-    }
-
-    initDepthUniforms();
+      caustics[i] = make_shared<Texture>();
+      caustics[i]->setFilename(causticDir + filename);
+      caustics[i]->init();
+      caustics[i]->setUnit(deferred_buffers.buffers.size() + i);
+      caustics[i]->setWrapModes(GL_REPEAT, GL_REPEAT);
+  }
 }
 
-void RenderSystem::initDepthUniforms() {
-    VPB.V.lookAt(vec3(-2.0,10.0,0.0), vec3(0.0,0.0,0.0), vec3(0.0,-1.0,0.0));
-    VPB.P.ortho(-10, 10, -10, 10, 0, 100);
-    VPB.B.loadIdentity();
-    // VPB.B.translate(vec3(0.5, 0.5, 0.5));
-    VPB.B.scale(vec3(1.0, 7.5, 1.0));
+void RenderSystem::initDepthUniforms(double causticSize, double shadowSize) {
+  depthSet.causticOrtho.ortho(-causticSize, causticSize, -causticSize, causticSize, 0.01, 100.0);
 
-    deferred_uber->bind();
+  depthSet.shadowOrtho.ortho(-shadowSize, shadowSize, -shadowSize, shadowSize, 0.01, 100.0);
 
-    glUniformMatrix4fv(deferred_uber->getUniform("depthV"), 1, GL_FALSE, value_ptr(VPB.V.topMatrix()));
-    glUniformMatrix4fv(deferred_uber->getUniform("depthP"), 1, GL_FALSE, value_ptr(VPB.P.topMatrix()));
-    glUniformMatrix4fv(deferred_uber->getUniform("depthB"), 1, GL_FALSE, value_ptr(VPB.B.topMatrix()));
+  depthSet.bias.loadIdentity();
+  depthSet.bias.translate(vec3(0.5, 0.5, 0.5));
+  depthSet.bias.scale(0.5);
+}
 
-    deferred_uber->unbind();
+void RenderSystem::updateDepthUniforms() {
+  mat4 causticMatrix = depthSet.bias.topMatrix() * depthSet.causticOrtho.topMatrix() * depthSet.lightView.topMatrix();
+  mat4 shadowMatrix = depthSet.bias.topMatrix() * depthSet.shadowOrtho.topMatrix() * depthSet.lightView.topMatrix();
+  mat4 depthMatrix = depthSet.shadowOrtho.topMatrix() * depthSet.lightView.topMatrix();
 
+  deferred_uber->bind();
+
+  glUniformMatrix4fv(deferred_uber->getUniform("causticMatrix"), 1, GL_FALSE, value_ptr(causticMatrix));
+  glUniformMatrix4fv(deferred_uber->getUniform("shadowMatrix"), 1, GL_FALSE, value_ptr(shadowMatrix));
+
+  deferred_uber->unbind();
+
+  deferred_shadow->bind();
+
+  glUniformMatrix4fv(deferred_shadow->getUniform("depthMatrix"), 1, GL_FALSE, value_ptr(depthMatrix));
+
+  deferred_shadow->unbind();
 }
 
 void RenderSystem::updateCaustic() {
+  deferred_uber->bind();
 
-    caustics[currCaustic]->bind(deferred_uber->getUniform("caustic"));
-    currCaustic = ++currCaustic >= CAUSTIC_COUNT ? 0 : currCaustic;
+  caustics[currCaustic]->bind(deferred_uber->getUniform("caustic"));
+  currCaustic = ++currCaustic >= CAUSTIC_COUNT ? 0 : currCaustic;
+
+  deferred_uber->unbind();
 }
 
+void RenderSystem::initShadowMap(int width, int height) {
+  glGenFramebuffers(1, &shadowFramebuffer);
+  glBindFramebuffer(GL_FRAMEBUFFER, shadowFramebuffer);
+
+  // Depth texture. Slower than a depth buffer, but you can sample it later in your shader
+  glGenTextures(1, &shadowTexture);
+  glBindTexture(GL_TEXTURE_2D, shadowTexture);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT16, width, height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, 0);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+
+  GLfloat color[4]={1,1,1,1};
+  glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, color);
+
+  glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, shadowTexture, 0);
+
+  glDrawBuffer(GL_NONE); // No color buffer is drawn to.
+
+  // Always check that our framebuffer is ok
+  if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+    exit(0);
+}
+
+void RenderSystem::updateShadowMap() {
+  deferred_uber->bind();
+
+  glActiveTexture(GL_TEXTURE0 + (deferred_buffers.buffers.size() + CAUSTIC_COUNT));
+  glBindTexture(GL_TEXTURE_2D, shadowTexture);
+  glUniform1i(deferred_uber->getUniform("shadowMap"), (deferred_buffers.buffers.size() + CAUSTIC_COUNT));
+
+  deferred_uber->unbind();
+}

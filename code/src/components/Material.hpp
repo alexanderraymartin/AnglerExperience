@@ -37,12 +37,9 @@ using namespace glm;
 class Material : public Component{
  public:
   Material() {}
-  Material(const json &matjson, ShaderLibrary &shaderlib);
-  Material(Program* shader);
-  Material(const string &shadername) : shadername(shadername) {}
-  Material(const json &matjson, Program* shader);
-  Material(const string &path, ShaderLibrary &shaderlib);
-  Material(const char* path, ShaderLibrary &shaderlib) : Material(string(path), shaderlib) {}
+  Material(const json &matjson);
+  Material(const string &path);
+  Material(const char* path) : Material(string(path)) {}
 
 
   void setIntProp(const string &keyword, int prop);
@@ -55,6 +52,9 @@ class Material : public Component{
   void setMat3Prop(const string &keyword,const mat3 &prop);
   void setMat4Prop(const string &keyword,const mat4 &prop);
 
+  void setCheckFirst(bool checkFirst);
+  bool getCheckFirst();
+
   // int getIntProp(const string &keyword);
   // float getFloatProp(const string &keyword);
   // vec2 getVec2Prop(const string &keyword);
@@ -64,17 +64,12 @@ class Material : public Component{
   // mat3 getMat3Prop(const string &keyword);
   // mat4 getMat4Prop(const string &keyword);
 
-  void apply() const;
+  void apply(Program* shader) const;
 
   void exportJSON(ostream &outstream) const;
 
   // If true the RenderSystem should check if the shader has a uniform before attempting to set it
   // This simply serves as a way to reduce warnings from OpenGL
-  bool checkShaderFirst = true;
-
-  string shadername;
-  Program* shader = NULL;
-
  protected:
   enum TypeEnum{
     Prop_Type_Int = 1,
@@ -88,9 +83,10 @@ class Material : public Component{
     Prop_Type_Mat4 = 0x40   // 64
   };
 
-  void applyIndividual(const string &key, const json &value, Material::TypeEnum type) const;
+  bool checkShaderFirst = true;
 
-  void resolveShader(ShaderLibrary &shaderlib);
+  void applyIndividual(const string &key, const json &value, Material::TypeEnum type, Program* shader) const;
+
   void loadFromJSON(const json &matjson);
 
   json internalMaterial;

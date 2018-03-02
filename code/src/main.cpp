@@ -31,6 +31,7 @@
 #include "AnimationComponents.hpp"
 #include "LightingComponents.hpp"
 #include "Material.hpp"
+#include "Camera.h"
 
 #include "RenderSystem.hpp"
 #include "AnimationSystem.hpp"
@@ -48,7 +49,7 @@ static void initGL();
 static void initLibs(TopLevelResources &resources);
 static void initGLFW(ApplicationState &appstate);
 static void initShaders(ApplicationState &appstate);
-static void initScene(ApplicationState &appstate, GameState &gstate);
+static void initScene(ApplicationState &appstate, GameState &gstate, Camera* camera);
 
 static GLFWmonitor* autoDetectScreen(UINT* width, UINT* height);
 static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
@@ -74,24 +75,25 @@ int main(int argc, char** argv){
   initLibs(appstate.resources); // Can be split up in needed
   initGL();
   initShaders(appstate);
-
-  initScene(appstate, gstate);
+  DynamicCamera* camera = new DynamicCamera();
+  initScene(appstate, gstate, camera);
 
   RenderSystem::init(appstate);
 
   gstate.gameTime.reset();
   while(!glfwWindowShouldClose(appstate.window)){
 
-    double fxAnimTime = gstate.fxAnimTime.elapsed();
+    double dt = gstate.fxAnimTime.elapsed();
     // TODO: Appropriate timestep loop structure
     {
       // TODO: PlayerSystem::update(appstate, gstate, elapsedTime);
       // TODO: CameraSystem::update(appstate, gstate, elapsedTime);
+		camera->update(appstate.window, dt);
       // TODO: SwarmSystem::update(appstate, gstate, elapsedTime);
       // TODO: PhysicsSystem::update(appstate, gstate, elapsedTime);
       // TODO: ParticleSystem::update(appstate, gstate, elapsedTime); // Particle System System*
       // TODO: GameplaySystem::update(appstate, gstate, elapsedTime);
-      AnimationSystem::update(appstate, gstate, fxAnimTime);
+      AnimationSystem::update(appstate, gstate, dt);
     }
 
     // Rendering happens here. This 'RenderSystem' will end up containing a lot and effectively
@@ -100,7 +102,7 @@ int main(int argc, char** argv){
     // try and keep all that linked together inside of the single RenderSystem for simplicity and
     // so that not buffers or other data has to be shared between calls here in main(). 
 
-    RenderSystem::render(appstate, gstate, fxAnimTime);
+    RenderSystem::render(appstate, gstate, dt);
 
     glfwSwapBuffers(appstate.window);
     glfwPollEvents();
@@ -217,9 +219,9 @@ static void initShaders(ApplicationState &appstate){
   }
 }
 
-static void initScene(ApplicationState &appstate, GameState &gstate){
-  StaticCamera* scenecam = new StaticCamera(37.5, glm::vec3(0.0, 3.4, 0.0), glm::vec3(0.0, 3.1, 3.0));
-  gstate.activeScene = new Scene(scenecam);
+static void initScene(ApplicationState &appstate, GameState &gstate, Camera* camera){
+  //StaticCamera* scenecam = new StaticCamera(37.5, glm::vec3(0.0, 3.4, 0.0), glm::vec3(0.0, 3.1, 3.0));
+	gstate.activeScene = new Scene(camera);
 
   Entity* sun;
   {
@@ -229,6 +231,7 @@ static void initScene(ApplicationState &appstate, GameState &gstate){
       glm::vec3(0.5, -1.0, 1.0))
     );
   }
+  gstate.activeScene->addEntity(sun);
 
   Entity* pointlight;
   {
@@ -236,12 +239,13 @@ static void initScene(ApplicationState &appstate, GameState &gstate){
     pointlight->attach(new PointLight(glm::vec3(.2), 1.0, 15.0));
     pointlight->attach(new Pose(glm::vec3(-1.5, 0.5, 1.0)));
   }
+  gstate.activeScene->addEntity(pointlight);
 
   Entity* groundplane;
   {
     groundplane = new Entity();
 
-    Material mat("" STRIFY(ASSET_DIR) "/simple-phong.mat", appstate.resources.shaderlib);
+    Material mat("" STRIFY(ASSET_DIR) "/simple-phong.mat");
 
     vector<Geometry> cubegeo;
     Geometry::loadFullObj( "" STRIFY(ASSET_DIR) "/cube.obj", cubegeo);
@@ -256,7 +260,28 @@ static void initScene(ApplicationState &appstate, GameState &gstate){
     groundplane->attach(pose);
   }
 
+  Entity* cube;
+  {
+    cube = new Entity();
+
+    Material mat("" STRIFY(ASSET_DIR) "/simple-phong.mat");
+
+    vector<Geometry> cubegeo;
+    Geometry::loadFullObj( "" STRIFY(ASSET_DIR) "/cube.obj", cubegeo);
+
+    SolidMesh* mesh = new SolidMesh(cubegeo);
+    mesh->setMaterial(mat);
+
+    Pose* pose = new Pose(glm::vec3(0, 3, 10));
+    pose->scale = glm::vec3(0.1, 0.1, 0.1);
+    pose->orient = glm::angleAxis(glm::radians(45.0f), glm::vec3(0, 1, 0));
+    cube->attach(mesh);
+    cube->attach(pose);
+  }
+
   gstate.activeScene->addEntity(groundplane);
+  gstate.activeScene->addEntity(cube);
+
   gstate.activeScene->addEntity(sun);
   gstate.activeScene->addEntity(pointlight);
 }

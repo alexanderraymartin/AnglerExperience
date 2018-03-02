@@ -12,19 +12,11 @@
 using namespace std;
 using namespace glm;
 
-Material::Material(Program* shader) : shader(shader){
-  // Nothing to do
-}
-Material::Material(const json &matjson, Program* shader) : shader(shader){
+Material::Material(const json &matjson){
   loadFromJSON(matjson);
 }
 
-Material::Material(const json &matjson, ShaderLibrary &shaderlib){
-  loadFromJSON(matjson);
-  resolveShader(shaderlib);
-}
-
-Material::Material(const string &path, ShaderLibrary &shaderlib){
+Material::Material(const string &path){
   ifstream matfile = ifstream(path);
   json tmp;
   if(matfile.is_open()){
@@ -32,19 +24,17 @@ Material::Material(const string &path, ShaderLibrary &shaderlib){
     matfile.close();
     cout << "Loaded " << path << endl;
     loadFromJSON(tmp);
-    resolveShader(shaderlib);
   }else{
     cerr << "Couldn't open material file " << path << endl;
-    shadername = "___missing___";
   }
 }
 
-void Material::resolveShader(ShaderLibrary &shaderlib){
-  if(shader == NULL && !shadername.empty()){
-    shader = shaderlib.getPtr(shadername);
-  }else{
-    shader = shaderlib.getPtr("");
-  }
+void Material::setCheckFirst(bool checkFirst){
+  checkShaderFirst = checkFirst;
+}
+
+bool Material::getCheckFirst(){
+  return(checkShaderFirst);
 }
 
 void Material::setIntProp(const string &keyword, int prop){
@@ -79,7 +69,7 @@ void Material::setMat4Prop(const string &keyword, const mat4 &prop){
 }
 
 
-void Material::applyIndividual(const string &key, const json &value, Material::TypeEnum type) const{
+void Material::applyIndividual(const string &key, const json &value, Material::TypeEnum type, Program* shader) const{
   switch(type){
     case Prop_Type_Int:
       glUniform1i(shader->getUniform(key), value.get<int>());
@@ -113,26 +103,22 @@ void Material::applyIndividual(const string &key, const json &value, Material::T
   }
 }
 
-void Material::apply() const{
+void Material::apply(Program* shader) const{
   for(json::const_iterator it = internalMaterial.begin(); it != internalMaterial.end(); ++it){
-    applyIndividual(it.key(), it.value()[1], it.value()[0].get<Material::TypeEnum>());
+    if( !checkShaderFirst || shader->hasUniform(it.key() )){
+      applyIndividual(it.key(), it.value()[1], it.value()[0].get<Material::TypeEnum>(), shader);
+    }
   }
 }
 
 void Material::exportJSON(ostream &outstream) const{
-  json tmp = {{"shader", shadername}, {"material", internalMaterial}};
+  json tmp = {{"material", internalMaterial}};
 }
 
 void Material::loadFromJSON(const json &matjson){
-  if(matjson.find("shader") != matjson.end() && matjson.find("material") != matjson.end()){ // All good
-    shadername = matjson["shader"].get<string>();
+  if(matjson.find("material") != matjson.end()){ // All good
     internalMaterial = matjson["material"];
-  }else if(matjson.find("shader") != matjson.end()){ // Shader name given but not material
-    shadername = matjson["shader"].get<string>();
-  }else if(matjson.find("material") != matjson.end()){ // Material object given but not shader name
-    shadername = "___missing___";
   }else if(matjson.is_object()){ // Just an object, assume it's an unlabeled material
-    shadername = "___missing___";
     internalMaterial = matjson;
   }else{
     fprintf(stderr, "Warning! Json object given for material appears to be malformed\n");

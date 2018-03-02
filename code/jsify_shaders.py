@@ -2,7 +2,9 @@
 
 from __future__ import print_function
 import os
+import fnmatch
 pathutils = os.path
+from sys import version_info as _version_info
 import sys
 import re
 from glob import glob
@@ -31,8 +33,13 @@ def gather_shaders(path):
 	vslist = []
 	fslist = []
 	fullpath = pathutils.abspath(path)
-	foundvert = glob(fullpath+"/**/*.vs", recursive = True) + glob(fullpath+"/**/*.vert", recursive = True)
-	foundfrag = glob(fullpath+"/**/*.fs", recursive = True) + glob(fullpath+"/**/*.frag", recursive = True)
+	foundvert = foundfrag = []
+	if(_version_info[0] < 3):
+		foundvert = old_recurse(fullpath, "*.vs", 1) + old_recurse(fullpath, "*.vert", 1);
+		foundfrag = old_recurse(fullpath, "*.fs", 1) + old_recurse(fullpath, "*.frag", 1);
+	else:
+		foundvert = glob(fullpath+"/**/*.vs", recursive = True) + glob(fullpath+"/**/*.vert", recursive = True)
+		foundfrag = glob(fullpath+"/**/*.fs", recursive = True) + glob(fullpath+"/**/*.frag", recursive = True)
 
 	for vs in foundvert:
 		vslist.append(VertexShader(vs, fullpath = fullpath))
@@ -132,6 +139,17 @@ def parse_pair(line):
 		ref = match.groups()[-1].strip()
 		return(ref);
 	return(None);
+
+def old_recurse(path, pattern, depth):
+	matches = []
+	itr = 0;
+	for root, dirs, files in os.walk(path):
+		for match in fnmatch.filter(files, pattern):
+			matches.append(pathutils.join(root, match))
+		if(itr >= depth):
+			break
+		itr+=1
+	return(matches)
 
 if __name__ == "__main__":
 	main()
