@@ -13,7 +13,7 @@ using namespace std;
 class ShaderLibrary{
 // This is a gray area of no referencing outside of ./utility because I think friend declarations
 // apply by name only and therefore no knowledge of the Material class is necessary. 
-friend class Material; 
+friend class Material;
 
  public:
   ShaderLibrary(){}
@@ -33,18 +33,14 @@ friend class Material;
   // library during rendering that skip the overhead of the hash-table whilst avoiding redundant bind calls.
   void fastActivate(Program* prog);
 
-  const Program& getActive();
+  Program& getActive();
 
-  // TODO: void create(string name, ProgramType type, <collection> sources, <collection> uniforms, <collection> attributes);
-  // Note: Program.h needs and update first so that it supports more general GLSL programs other than vs->fs
-
- protected:
   // Should only be used in combination with fastActivate()! Do not use to bind manually!
-  const Program* getActivePtr();
+  Program* getActivePtr();
 
   // Same as getActivePtr but for any program in the library. If the given name is not found returns NULL
-  const Program* getPtr(const string &name);
-  const Program* getPtr(const char* name){return(getPtr(string(name)));}
+  Program* getPtr(const string &name);
+  Program* getPtr(const char* name){return(getPtr(string(name)));}
 
  private:
   bool inited = false;

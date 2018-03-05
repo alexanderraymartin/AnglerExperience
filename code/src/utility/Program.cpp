@@ -1,6 +1,7 @@
 #include "Program.h"
 
 #include <iostream>
+#include <fstream>
 #include <cassert>
 
 #include "GLSL.h"
@@ -21,7 +22,22 @@ Program::Program(const json &program_obj) : pid(0), verbose(true){
   }
 }
 
-Program::Program(istream *vertex, istream *fragment){
+Program::Program(istream &vertex, istream &fragment){
+  if(!buildVsFsProgram(vertex, fragment)){
+    fprintf(stderr, "Warning!: Failed building VsFs program given in constructor.\n");
+  }
+}
+
+Program::Program(const string &vpath, const string &fpath){
+  ifstream vertex = ifstream(vpath);
+  ifstream fragment = ifstream(fpath);
+  if(!vertex.is_open()){
+    fprintf(stderr, "Warning!: Couldn't open given shader file: ");
+    cerr << vpath << endl;
+  }else if(!fragment.is_open()){
+    fprintf(stderr, "Warning!: Couldn't open given shader file: ");
+    cerr << fpath << endl;
+  }
   if(!buildVsFsProgram(vertex, fragment)){
     fprintf(stderr, "Warning!: Failed building VsFs program given in constructor.\n");
   }
@@ -33,40 +49,32 @@ Program::~Program()
 }
 
 
-bool Program::buildVsFsProgram(istream *vertex, istream *fragment){  
+bool Program::buildVsFsProgram(istream &vertex, istream &fragment){  
   // Create shader handles
   GLuint VS = glCreateShader(GL_VERTEX_SHADER);
   GLuint FS = glCreateShader(GL_FRAGMENT_SHADER);
 
-  char *vshader;
-  char *fshader;
+  string vshader;
+  string fshader;
 
   // Read shader sources
-  if(vertex && fragment){
-    // Get number of chars in each source
-    vertex->seekg(0, vertex->end);
-    fragment->seekg(0, fragment->end);
-    size_t v_size = vertex->tellg();
-    size_t f_size = fragment->tellg();
-    vertex->seekg(vertex->beg);
-    fragment->seekg(fragment->beg);
+  // Get number of chars in each source
+  vertex.seekg(0, ios::end);
+  fragment.seekg(0, ios::end);
+  vshader.reserve((size_t) vertex.tellg());
+  fshader.reserve((size_t) fragment.tellg());
+  vertex.seekg(ios::beg);
+  fragment.seekg(ios::beg);
 
-    //Allocate char* for each source then copy
-    vshader = new char[v_size];
-    fshader = new char[f_size];
-    vertex->read(vshader, v_size);
-    fragment->read(fshader, f_size);
-  }else{
-    fprintf(stderr, "Istreams given to build VsFs program were invalid\n");
-    return(false);
-  }
+  vshader.assign((std::istreambuf_iterator<char>(vertex)), std::istreambuf_iterator<char>());
+  fshader.assign((std::istreambuf_iterator<char>(fragment)), std::istreambuf_iterator<char>());
+
+  //Allocate char* for each source then copy
+  const char* vshaderpt = vshader.c_str();
+  const char* fshaderpt = fshader.c_str();
   
-  glShaderSource(VS, 1, &vshader, NULL);
-  glShaderSource(FS, 1, &fshader, NULL);
-
-  // No memory leaks
-  delete vshader;
-  delete fshader;
+  glShaderSource(VS, 1, &vshaderpt, NULL);
+  glShaderSource(FS, 1, &fshaderpt, NULL);
   
   // Compile shaders
   if(!GLSL::compileAndCheck(VS, verbose)){
@@ -93,7 +101,7 @@ bool Program::buildVsFsProgram(istream *vertex, istream *fragment){
 }
 
 // Used to select shader type from json
-static map<const char*, GLenum> typemap = {
+static map<string, GLenum> typemap = {
   {"vertex", GL_VERTEX_SHADER},
   {"fragment", GL_FRAGMENT_SHADER},
   {"geometry", GL_GEOMETRY_SHADER},
@@ -106,24 +114,30 @@ bool Program::buildFromJsonArray(const json &program_obj){
 
   // Iterate through JSON array and compile each individual component shader
   for(auto &j : program_obj){
-    GLuint cshad = glCreateShader(typemap[j["type"].get<string>().c_str()]);
-    const char* srcptr = j["src"].get<string>().c_str();
+    GLuint cshad = glCreateShader(typemap[j["type"].get<string>()]);
+    string src = j["src"].get<string>().c_str();
+    const char* srcptr = src.c_str();
     glShaderSource(cshad, 1, &srcptr, NULL);
     if(!GLSL::compileAndCheck(cshad, verbose)){
-      cerr << "Compiling shader " << j["name"] << " in JSON array failed!\n";
+      cerr << "Compiling shader " << j["basename"].get<string>() << " in JSON array failed!\n";
       return(false);
     }
 
     // Add attributes and uniforms to vector 
-    for(auto &attr : j["attributes"]){
-      prog_attributes.push_back(attr[1].get<string>().c_str());
-    }
-    for(auto &unif : j["uniforms"]){
-      prog_uniforms.push_back(unif[1].get<string>().c_str());
-    }
 
+    if(j.find("attributes") != j.end()){
+      for(auto &attr : j["attributes"]){
+          prog_attributes.push_back(attr[1].get<string>().c_str());
+        }
+    }
+    if(j.find("uniforms") != j.end()){
+      for(auto &unif : j["uniforms"]){
+        prog_uniforms.push_back(unif[1].get<string>().c_str());
+      }
+    }
     component_shaders.push_back(cshad);
   }
+
 
   // Attatch all given shaders
   pid = glCreateProgram();
@@ -138,24 +152,6 @@ bool Program::buildFromJsonArray(const json &program_obj){
   }
 
   GLSL::checkError(GET_FILE_LINE);
-
-  // Put uniform and attribute locations into the map now instead of later
-  for(auto &attr : prog_attributes){
-    GLint id = GLSL::getAttribLocation(pid, attr, verbose);
-    if(id < 0 && verbose){
-      fprintf(stderr, "Attribute %s could not be found!\n", attr);
-    }else if(id >= 0){
-      attributes[attr] = id;
-    }
-  }
-  for(auto &unif : prog_uniforms){
-    GLint id = GLSL::getUniformLocation(pid, unif, verbose);
-    if(id < 0 && verbose){
-      fprintf(stderr, "Attribute %s could not be found!\n", unif);
-    }else if(id >= 0){
-      uniforms[unif] = id;
-    }
-  }
 
   return(true);
 }
@@ -187,7 +183,6 @@ GLint Program::getAttribute(const string &name)
   }else{
     return attr->second;
   }
-  
 }
 
 GLint Program::getUniform(const string &name)
@@ -206,5 +201,35 @@ GLint Program::getUniform(const string &name)
     }
   }else{
     return unif->second;
+  }
+}
+
+bool Program::hasAttribute(const string &name){
+  unordered_map<string,GLint>::const_iterator attr = attributes.find(name.c_str());
+  if(attr == attributes.end()) {
+    GLint id = GLSL::getAttribLocation(pid, name.c_str(), verbose);
+    if(id < 0){
+      return(false);
+    }else{
+      attributes[name] = id;
+      return(true);
+    }
+  }else{
+    return(true);
+  }
+}
+
+bool Program::hasUniform(const string &name){
+  unordered_map<string,GLint>::const_iterator unif = uniforms.find(name.c_str());
+  if(unif == uniforms.end()) {
+    GLint id = GLSL::getUniformLocation(pid, name.c_str(), verbose);
+    if(id < 0){
+      return(false);
+    }else{
+      uniforms[name] = id;
+      return(true);
+    }
+  }else{
+    return(true);
   }
 }

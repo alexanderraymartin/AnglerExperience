@@ -10,6 +10,11 @@ MatrixStack::MatrixStack() {
   mstack->push(mat4(1.0));
 }
 
+MatrixStack::MatrixStack(const mat4 &matrix){
+  mstack = make_shared<stack<mat4>>();
+  mstack->push(matrix);
+}
+
 MatrixStack::~MatrixStack() { }
 
 void MatrixStack::pushMatrix()

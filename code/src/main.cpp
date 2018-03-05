@@ -1,6 +1,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <iostream>
+#include <fstream>
+#include <limits>
 #define _USE_MATH_DEFINES
 #include <cmath>
 
@@ -9,21 +11,34 @@
 #include "utility/GLSL.h"
 
 #include <GLFW/glfw3.h>
+#include <glm/glm.hpp>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/quaternion.hpp>
 
-#include "utility/common.h"
+#include <json.hpp>
+
+#include <common.h>
 #include "core.h"
 #include "GameState.hpp"
-
-/* to use glee */
-#define GLEE_OVERWRITE_GL_FUNCTIONS
-#include "utility/glee.h"
 
 // This isn't really necessary as we will be importing implementations of these interfaces
 // but for now it's nice to make sure things compile with them there. 
 #include "Component.hpp"
 #include "Entity.hpp"
 
+#include "components/Geometry.hpp"
+#include "SimpleComponents.hpp"
+#include "AnimationComponents.hpp"
+#include "LightingComponents.hpp"
+#include "Material.hpp"
+#include "Camera.h"
+
+#include "RenderSystem.hpp"
+#include "AnimationSystem.hpp"
+
 using namespace std;
+
+// #define FORCEWINDOW
 
 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -33,8 +48,8 @@ using namespace std;
 static void initGL();
 static void initLibs(TopLevelResources &resources);
 static void initGLFW(ApplicationState &appstate);
-static void initShaders(const ApplicationState &appstate, TopLevelResources &resources);
-static void initPrimitives(TopLevelResources &resources);
+static void initShaders(ApplicationState &appstate);
+static void initScene(ApplicationState &appstate, GameState &gstate, Camera* camera);
 
 static GLFWmonitor* autoDetectScreen(UINT* width, UINT* height);
 static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
@@ -53,30 +68,32 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 
 int main(int argc, char** argv){
   ApplicationState appstate; 
-  TopLevelResources resources;
   GameState gstate(glfwGetTime); // glfwGetTime used as source of time. It can be replaced.
 
   srand(time(NULL));
   initGLFW(appstate);
-  initLibs(resources); // Can be split up in needed
+  initLibs(appstate.resources); // Can be split up in needed
   initGL();
-  initShaders(appstate, resources);
-  initPrimitives(resources);
+  initShaders(appstate);
+  DynamicCamera* camera = new DynamicCamera();
+  initScene(appstate, gstate, camera);
 
-  // TODO: initScene(appstate, resources, gstate);
-  // TODO (maybe): initSystems(appstate, resources, gstate);
+  RenderSystem::init(appstate);
 
+  gstate.gameTime.reset();
   while(!glfwWindowShouldClose(appstate.window)){
 
+    double dt = gstate.fxAnimTime.elapsed();
     // TODO: Appropriate timestep loop structure
     {
       // TODO: PlayerSystem::update(appstate, gstate, elapsedTime);
       // TODO: CameraSystem::update(appstate, gstate, elapsedTime);
+		camera->update(appstate.window, dt);
       // TODO: SwarmSystem::update(appstate, gstate, elapsedTime);
       // TODO: PhysicsSystem::update(appstate, gstate, elapsedTime);
       // TODO: ParticleSystem::update(appstate, gstate, elapsedTime); // Particle System System*
       // TODO: GameplaySystem::update(appstate, gstate, elapsedTime);
-      // TODO: AnimationSystem::update(appstate, gstate, elapsedTime);
+      AnimationSystem::update(appstate, gstate, dt);
     }
 
     // Rendering happens here. This 'RenderSystem' will end up containing a lot and effectively
@@ -85,24 +102,7 @@ int main(int argc, char** argv){
     // try and keep all that linked together inside of the single RenderSystem for simplicity and
     // so that not buffers or other data has to be shared between calls here in main(). 
 
-    // TODO: RenderSystem::render(appstate, gstate, elapsedTime);
-
-    // Temporary block for very early development. 
-
-    {
-      int width, height;
-      glfwGetFramebufferSize(appstate.window, &width, &height);
-      glViewport(0, 0, width, height);
-      
-      // Added this so it isn't just black screen. 
-      glClearColor(
-        0.0, 
-        fabs(sinf(gstate.fxAnimTime.getTime())),
-        fabs(sinf(gstate.fxAnimTime.getTime()+M_PI_2)),
-        1.0
-      );
-      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    }
+    RenderSystem::render(appstate, gstate, dt);
 
     glfwSwapBuffers(appstate.window);
     glfwPollEvents();
@@ -144,6 +144,8 @@ static void initGL(){
 
   GLSL::checkVersion();
   glEnable(GL_DEPTH_TEST);
+  glEnable(GL_CULL_FACE);
+  glFrontFace(GL_CCW);
   glClearColor(0.0, 0.0, 0.0, 1.0);
 }
 
@@ -154,10 +156,10 @@ static void initLibs(TopLevelResources &resources){
   // ...?
 }
 
+// This is verbose and ugly. Maybe we should move it.
 static void initGLFW(ApplicationState &appstate){
   // Lambda functions for simple callbacks
   auto error_callback = [](int error, const char* description){cerr << description << endl;};
-  auto resize_callback = [](GLFWwindow *window, int width, int height){glViewport(0, 0, width, height);};
 
   glfwSetErrorCallback(error_callback);
 
@@ -177,6 +179,10 @@ static void initGLFW(ApplicationState &appstate){
 
   GLFWmonitor* monitor = autoDetectScreen(&w_width, &w_height);
 
+#ifdef FORCEWINDOW
+  monitor = NULL;
+#endif
+
   fprintf(stderr, "Auto-selected %ux%u %s for screen config\n",
     w_width,
     w_height,
@@ -193,19 +199,91 @@ static void initGLFW(ApplicationState &appstate){
 
   glfwSwapInterval(1);
   // glfwSetInputMode(appstate.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-  glfwSetFramebufferSizeCallback(appstate.window, resize_callback);
+  glfwSetFramebufferSizeCallback(appstate.window, RenderSystem::onResize);
   glfwSetKeyCallback(appstate.window, key_callback);
 }
 
-static void initShaders(const ApplicationState &appstate, TopLevelResources &resources){
-  resources.shaderlib.init();
+static void initShaders(ApplicationState &appstate){
+  appstate.resources.shaderlib.init();
 
-  // TODO: Iterate through given shader source files, compile them, and store the in the shaderlib.
-  // Note: To prevent this from being ungodly long due to the nature of Zoe's Program class we should 
-  // probably set up some kind of alternative for adding all the uniforms and attributes. JSON loader? 
+  ifstream shaderfile = ifstream("" STRIFY(SHADER_DIR) "/shaders.json");
+  if(!shaderfile.is_open()){
+    fprintf(stderr, "Failed to open shaders json file!\n");
+    exit(3);
+  }
+  json shaderjson;
+  shaderfile >> shaderjson;
+  for(json::iterator it = shaderjson["pairs"].begin(); it != shaderjson["pairs"].end(); it++){
+    appstate.resources.shaderlib.add(it.key(), new Program(it.value()));
+    cout << "Loaded shader: " << it.key() << endl;
+  }
 }
-static void initPrimitives(TopLevelResources &resources){
-  // TODO: Load some primitive geometry into appropriate OpenGL buffers. (quads, tris, cube, sphere, ect...)
+
+static void initScene(ApplicationState &appstate, GameState &gstate, Camera* camera){
+  //StaticCamera* scenecam = new StaticCamera(37.5, glm::vec3(0.0, 3.4, 0.0), glm::vec3(0.0, 3.1, 3.0));
+	gstate.activeScene = new Scene(camera);
+
+  Entity* sun;
+  {
+    sun = new Entity();
+    sun->attach(new SunLight(
+      glm::vec3(.7, .7, .65),
+      glm::vec3(0.5, -1.0, 1.0))
+    );
+  }
+  gstate.activeScene->addEntity(sun);
+
+  Entity* pointlight;
+  {
+    pointlight = new Entity();
+    pointlight->attach(new PointLight(glm::vec3(.2), 1.0, 15.0));
+    pointlight->attach(new Pose(glm::vec3(-1.5, 0.5, 1.0)));
+  }
+  gstate.activeScene->addEntity(pointlight);
+
+  Entity* groundplane;
+  {
+    groundplane = new Entity();
+
+    Material mat("" STRIFY(ASSET_DIR) "/simple-phong.mat");
+
+    vector<Geometry> cubegeo;
+    Geometry::loadFullObj( "" STRIFY(ASSET_DIR) "/cube.obj", cubegeo);
+
+    SolidMesh* mesh = new SolidMesh(cubegeo);
+    mesh->setMaterial(mat);
+
+    Pose* pose = new Pose(glm::vec3(0.0906, -0.31318, 48.0));
+    pose->orient = glm::angleAxis(glm::radians(4.92f), glm::vec3(.793, -.051, .607));
+    pose->scale = glm::vec3(45.0, .05, 48.0);
+    groundplane->attach(mesh);
+    groundplane->attach(pose);
+  }
+
+  Entity* cube;
+  {
+    cube = new Entity();
+
+    Material mat("" STRIFY(ASSET_DIR) "/simple-phong.mat");
+
+    vector<Geometry> cubegeo;
+    Geometry::loadFullObj( "" STRIFY(ASSET_DIR) "/cube.obj", cubegeo);
+
+    SolidMesh* mesh = new SolidMesh(cubegeo);
+    mesh->setMaterial(mat);
+
+    Pose* pose = new Pose(glm::vec3(0, 3, 10));
+    pose->scale = glm::vec3(0.1, 0.1, 0.1);
+    pose->orient = glm::angleAxis(glm::radians(45.0f), glm::vec3(0, 1, 0));
+    cube->attach(mesh);
+    cube->attach(pose);
+  }
+
+  gstate.activeScene->addEntity(groundplane);
+  gstate.activeScene->addEntity(cube);
+
+  gstate.activeScene->addEntity(sun);
+  gstate.activeScene->addEntity(pointlight);
 }
 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
