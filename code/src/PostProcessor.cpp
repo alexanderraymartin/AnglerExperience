@@ -40,6 +40,7 @@ void PostProcessor::doPostProcessing(GLuint texture, GLuint depthBuffer)
   lastout = processBloom(texture, false);
   //lastout = processDepthOfField(texture, depthBuffer, false);
   //lastout = processDepthOfField(texBuf[lastout], depthBuffer, false);
+  //lastout = runFXAA(texture, true);
   lastout = runFXAA(texBuf[lastout], true);
 }
 

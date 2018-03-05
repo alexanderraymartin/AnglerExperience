@@ -21,11 +21,11 @@ void main(){
 	
 	///////////////////////////////////////////
 	// TODO remove after this testing works	
-	float depth = texture(depthBufTex, NDC).r;
-	float linDepth = linearizeDepth(depth);
-	color.r = depth;
-	color.g = linDepth;
-	color.b = sin(linDepth * 3.1415 * 2.0);
-	color.a = 1.0;
+	//float depth = texture(depthBufTex, NDC).r;
+	//float linDepth = linearizeDepth(depth);
+	//color.r = depth;
+	//color.g = linDepth;
+	//color.b = sin(linDepth * 3.1415 * 2.0);
+	//color.a = 1.0;
 	///////////////////////////////////////////
 }
