@@ -56,18 +56,27 @@ void RenderSystem::init(ApplicationState &appstate){
   PostProcessor::init(w_width, w_height, shaderlib);
 }
 
-void RenderSystem::render(ApplicationState &appstate, GameState &gstate, double elapsedTime){
-  Camera* camera;
-  if(!(camera = gstate.activeScene->camera)){
-    return;
-  }
-  
-  MVP.P = MatrixStack(camera->getPerspective(static_cast<double>(w_width)/w_height));
-  MVP.M.loadIdentity();
-  MVP.V = MatrixStack(camera->getView());
+void RenderSystem::setMVP(Camera* camera) {
+	MVP.P = MatrixStack(camera->getPerspective(static_cast<double>(w_width) / w_height));
+	MVP.M.loadIdentity();
+	MVP.V = MatrixStack(camera->getView());
+}
 
-  prepareDeferred(deferred_buffers.gBuffer);
-  drawEntities(gstate.activeScene, deferred_export);
+void RenderSystem::geometryPass(GameState &gstate) {
+	Camera* camera;
+	if (!(camera = gstate.activeScene->camera)) {
+		return;
+	}
+
+	setMVP(camera);
+
+	prepareDeferred(deferred_buffers.gBuffer);
+	drawEntities(gstate.activeScene, deferred_export);
+}
+
+void RenderSystem::render(ApplicationState &appstate, GameState &gstate, double elapsedTime){
+  
+  geometryPass(gstate);
 
   updateLighting(gstate.activeScene);
   updateDepthUniforms();
@@ -270,15 +279,23 @@ static void createGBufAttachment(int width, int height, vector<unsigned int> &bu
   glTexImage2D(GL_TEXTURE_2D, 0, channel_type, width, height, 0, channels, type, NULL);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + buffers.size() , GL_TEXTURE_2D, buffer, 0);
   buffers.push_back(buffer);
 }
 
 static void setGBufDepth(int width, int height, RenderSystem::Buffers &buffers) {
-  (glGenRenderbuffers(1, &buffers.depthBuffer));
-  (glBindRenderbuffer(GL_RENDERBUFFER, buffers.depthBuffer));
-  (glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, width, height));
-  (glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, buffers.depthBuffer));
+	glGenTextures(1, &buffers.depthBuffer);
+	glBindTexture(GL_TEXTURE_2D, buffers.depthBuffer);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, width, height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, buffers.depthBuffer, 0);
+	glDrawBuffer(GL_NONE);
+	glReadBuffer(GL_NONE);
 }
 
 static void initDeferredBuffers(int width, int height, RenderSystem::Buffers &buffers){
@@ -286,12 +303,12 @@ static void initDeferredBuffers(int width, int height, RenderSystem::Buffers &bu
   glGenFramebuffers(1, &(buffers.gBuffer));
   glBindFramebuffer(GL_FRAMEBUFFER, buffers.gBuffer);
   //32 bit floats may not be supported on some systems.
-  createGBufAttachment(width, height, buffers.buffers, GL_RGB16F, GL_RGB, GL_FLOAT);     //position buffer
-  createGBufAttachment(width, height, buffers.buffers, GL_RGB16F, GL_RGB, GL_FLOAT);     //normal buffer
-  createGBufAttachment(width, height, buffers.buffers, GL_RGBA, GL_RGBA, GL_UNSIGNED_INT); //color/emit buffer
-  createGBufAttachment(width, height, buffers.buffers, GL_RGBA, GL_RGBA, GL_UNSIGNED_INT); // Specular/shine buffer
+  createGBufAttachment(width, height, buffers.buffers, GL_RGB16F, GL_RGB, GL_FLOAT);		//position buffer
+  createGBufAttachment(width, height, buffers.buffers, GL_RGB16F, GL_RGB, GL_FLOAT);		//normal buffer
+  createGBufAttachment(width, height, buffers.buffers, GL_RGBA, GL_RGBA, GL_UNSIGNED_INT);	//color/emit buffer
+  createGBufAttachment(width, height, buffers.buffers, GL_RGBA, GL_RGBA, GL_UNSIGNED_INT);	// Specular/shine buffer
+  setGBufDepth(width, height, buffers);														//Depth buffer
   setGBufAttachment(buffers);
-  setGBufDepth(width, height, buffers);                            //Depth buffer
   if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
     fprintf(stderr, "Framebuffer not complete!\n");
 }

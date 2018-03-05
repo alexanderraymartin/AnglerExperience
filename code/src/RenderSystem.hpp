@@ -69,6 +69,10 @@ namespace RenderSystem{
 
   void updateLighting(Scene* scene);
 
+  void setMVP(Camera* camera);
+
+  void geometryPass(GameState &gstate);
+
   void applyShading(Scene* scene, ShaderLibrary &shaderlib);
 
   void drawEntities(Scene* scene, Program* shader);
