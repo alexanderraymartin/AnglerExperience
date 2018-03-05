@@ -69,6 +69,8 @@ public:
 
   GLint getAttribute(const string &name);
   GLint getUniform(const string &name);
+  bool hasAttribute(const string &name);
+  bool hasUniform(const string &name);
   
 private:
   GLuint pid;

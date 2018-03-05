@@ -21,67 +21,76 @@
 
 namespace RenderSystem{
 
-	// Any render settings should be declared here as 'static'
-	static int w_width, w_height;
+  // Any render settings should be declared here as 'static'
+  static int w_width, w_height;
 
-	// Any data structures used inbetween renders should also be stored here as static
-	static GLuint quadVAO;
-	static GLuint quadVBO;
+  static GLuint render_out_FBO;
+  static GLuint render_out_color;
+  static Program* deferred_export = NULL;
+  static Program* deferred_uber = NULL;
+  static Program* deferred_shadow = NULL;
 
-	static GLuint deferred_fbo;
-	static Program* deferred_export = NULL;
-	static Program* deferred_uber = NULL;
+  static ShaderLibrary* shaderlib = NULL;
+  
+  struct Buffers {
+    std::vector<unsigned int> buffers;
+    unsigned int gBuffer, depthBuffer;
+  };
 
-	static ShaderLibrary* shaderlib = NULL;
+  static Buffers deferred_buffers;
 
-	struct Buffers {
-		std::vector<unsigned int> buffers;
-		unsigned int gBuffer, depthBuffer;
-	};
+  struct MVPset {
+    MatrixStack M;
+    MatrixStack V;
+    MatrixStack P;
+  };
 
-	static Buffers deferred_buffers;
+  static MVPset MVP;
 
-	struct MVPset{
-		MatrixStack M;
-		MatrixStack V;
-		MatrixStack P;
-	};
+  struct DepthSet {
+    MatrixStack lightView;
+    MatrixStack causticOrtho;
+    MatrixStack shadowOrtho;
+    MatrixStack bias;
+  };
 
-	static MVPset MVP;
+  const static int CAUSTIC_COUNT = 32;
+  static DepthSet depthSet;
+  static int currCaustic = 0;
+  static string causticDir;
+  static std::shared_ptr<Texture> caustics[CAUSTIC_COUNT];
 
-    struct DepthSet{
-        MatrixStack V;
-        MatrixStack P;
-        MatrixStack B;
-    };
+  static GLuint shadowFramebuffer;
+  static GLuint shadowTexture;
 
-    const static int CAUSTIC_COUNT = 32;
-    static DepthSet VPB;
-    static int currCaustic = 0;
-    static string causticDir;
-    static std::shared_ptr<Texture> caustics[CAUSTIC_COUNT];
+  void init(ApplicationState &appstate);
 
+  void render(ApplicationState &appstate, GameState &gstate, double elapsedTime);
 
-	void init(ApplicationState &appstate);
+  void updateLighting(Scene* scene);
 
-	void render(ApplicationState &appstate, GameState &gstate, double elapsedTime);
+  void applyShading(Scene* scene, ShaderLibrary &shaderlib);
 
-	void updateLighting(Scene* scene);
+  void drawEntities(Scene* scene, Program* shader);
 
-	void applyShading(Scene* scene, ShaderLibrary &shaderlib);
+  void drawEntity(const Entity* entity, Program* shader);
 
-	void drawEntities(Scene* scene);
+  void runFXAA();
 
-	void drawEntity(const Entity* entity);
-
-	void onResize(GLFWwindow *window, int width, int height);
+  void onResize(GLFWwindow *window, int width, int height);
 
 
-    void initDepthUniforms();
+  void initDepthUniforms(double causticOrtho, double shadowOrtho);
 
-    void initCaustics();
+  void updateDepthUniforms();
 
-    void updateCaustic();
+  void initCaustics();
+
+  void updateCaustic();
+
+  void initShadowMap(int width, int height);
+
+  void updateShadowMap();
 
 };
 

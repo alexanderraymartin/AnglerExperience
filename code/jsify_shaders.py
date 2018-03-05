@@ -2,7 +2,9 @@
 
 from __future__ import print_function
 import os
+import fnmatch
 pathutils = os.path
+from sys import version_info as _version_info
 import sys
 import re
 from glob import glob
@@ -31,14 +33,19 @@ def gather_shaders(path):
 	vslist = []
 	fslist = []
 	fullpath = pathutils.abspath(path)
-	foundvert = glob(fullpath+"/*.vs") + glob(fullpath+"/*.vert")
-	foundfrag = glob(fullpath+"/*.fs") + glob(fullpath+"/*.frag")
+	foundvert = foundfrag = []
+	if(_version_info[0] < 3):
+		foundvert = old_recurse(fullpath, "*.vs", 1) + old_recurse(fullpath, "*.vert", 1);
+		foundfrag = old_recurse(fullpath, "*.fs", 1) + old_recurse(fullpath, "*.frag", 1);
+	else:
+		foundvert = glob(fullpath+"/**/*.vs", recursive = True) + glob(fullpath+"/**/*.vert", recursive = True)
+		foundfrag = glob(fullpath+"/**/*.fs", recursive = True) + glob(fullpath+"/**/*.frag", recursive = True)
 
 	for vs in foundvert:
-		vslist.append(VertexShader(vs))
+		vslist.append(VertexShader(vs, fullpath = fullpath))
 
 	for fs in foundfrag:
-		fslist.append(FragmentShader(fs))
+		fslist.append(FragmentShader(fs, fullpath = fullpath))
 
 	return((vslist,fslist))
 
@@ -46,15 +53,15 @@ def export_json(vslist, fslist, opath):
 	pairs = {}
 	for vs in vslist:
 		for fs in fslist:
-			if(vs.basename == fs.basename):
-				pairs[vs.basename] = (vs.__dict__,fs.__dict__)
+			if(vs.basename == fs.basename or vs.pair == fs.longname or fs.pair == vs.longname):
+				pairs[vs.extendedbasename if fs.pair == None else fs.extendedbasename] = (vs.__dict__,fs.__dict__)
 
 	floating = {}
 
 	for vs in vslist:
-		floating[vs.name] = vs.__dict__
+		floating[vs.longname] = vs.__dict__
 	for fs in fslist:
-		floating[fs.name] = fs.__dict__
+		floating[fs.longname] = fs.__dict__
 
 	ofile = open(opath,'w')
 	ofile.write(json.dumps({"pairs": pairs, "all": floating}, indent=2))
@@ -67,10 +74,11 @@ def parse_args():
 	return(parser.parse_args())
 
 class VertexShader():
-	def __init__(self, path):
+	def __init__(self, path, fullpath = "./"):
 		f = open(path, 'r')
 
 		self.type = 'vertex'
+		self.pair = None
 		
 		self.lines = []
 		self.uniforms = []
@@ -78,6 +86,8 @@ class VertexShader():
 		for line in f:
 			self.lines.append("      {0}".format(line))
 			splitline = line.split()
+			if(len(self.lines) == 1):
+				self.pair = parse_pair(line)
 			if(len(splitline) != 0):
 				attmatch = re.search(R"layout\(location = [0-9]+\)", line)
 				if(splitline[0] == "uniform"):
@@ -87,30 +97,59 @@ class VertexShader():
 
 		self.src = ''.join(self.lines)
 		self.lines = len(self.lines)
-		self.name, self.ext = pathutils.splitext(path)
+		self.filename = pathutils.split(path)[-1]
+		self.name, self.ext = pathutils.splitext(self.filename)
 		self.basename = pathutils.basename(self.name)
 		self.name = "vert_{0}".format(pathutils.basename(self.name))
+		longprefix = [seg.strip() for seg in pathutils.relpath(path, start=fullpath).split(pathutils.sep)[0:-1] ]
+		self.longname =  '_'.join(longprefix + [self.name])
+		self.extendedbasename = '_'.join(longprefix + [self.basename])
 
 class FragmentShader():
-	def __init__(self, path):
+	def __init__(self, path, fullpath = "./"):
 		f = open(path, 'r')
 
 		self.type = 'fragment'
+		self.pair = None
 
 		self.lines = []
 		self.uniforms = []
 		for line in f:
 			self.lines.append("      {0}".format(line))
 			splitline = line.split()
+			if(len(self.lines) == 1):
+				self.pair = parse_pair(line)
 			if(len(splitline) != 0):
 				if(splitline[0] == "uniform"):
 					self.uniforms.append([splitline[1], splitline[2].replace(';', '')])
 
 		self.src = ''.join(self.lines)
 		self.lines = len(self.lines)
-		self.name, self.ext = pathutils.splitext(path)
+		self.filename = pathutils.split(path)[-1]
+		self.name, self.ext = pathutils.splitext(self.filename)
 		self.basename = pathutils.basename(self.name)
 		self.name = "frag_{0}".format(pathutils.basename(self.name))
+		longprefix = [seg.strip() for seg in pathutils.relpath(path, start=fullpath).split(pathutils.sep)[0:-1] ]
+		self.longname =  '_'.join(longprefix + [self.name])
+		self.extendedbasename = '_'.join(longprefix + [self.basename])
+
+def parse_pair(line):
+	match = re.search(R"^// PAIR:\s+(\S+)\s*$", line);
+	if(match != None):
+		ref = match.groups()[-1].strip()
+		return(ref);
+	return(None);
+
+def old_recurse(path, pattern, depth):
+	matches = []
+	itr = 0;
+	for root, dirs, files in os.walk(path):
+		for match in fnmatch.filter(files, pattern):
+			matches.append(pathutils.join(root, match))
+		if(itr >= depth):
+			break
+		itr+=1
+	return(matches)
 
 if __name__ == "__main__":
 	main()
