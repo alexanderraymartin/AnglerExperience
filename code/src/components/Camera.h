@@ -5,9 +5,12 @@
 #include "SimpleComponents.hpp"
 #include <glm/glm.hpp>
 #include <GLFW/glfw3.h>
+#include <random>
 
 class DynamicCamera : public Camera {
 protected:
+	//Random number generator
+	default_random_engine generator;
 	//The amount of force applied by the user, calculated in update based on keys pressed
 	glm::vec3 userForce;
 	//The direction the camera faces when the game begins
@@ -28,15 +31,36 @@ protected:
 	float FRICTION_CONSTANT = 3.0f;
 	//The more mass, the slower all accelerations are.
 	float CAMERA_MASS = 1.0f;
+	//The amount of force reduced per second
+	float SHAKE_DECAY_RATE = 1.0f;
+	//The amount of times per second that the shake direction should change
+	int SHAKE_CHANGE_RATE = 15;
 
+	//Field of view in degrees
 	float fov;
+	//The disntance to the near plane
 	float near;
+	//The distance to the far plane
 	float far;
 
+	//The amount of force used to shake the camera
+	float shakeAmount;
+	//The direction the shake force is pushing
+	glm::vec3 shakeDir;
+
+	//Calculates the physics on the camera based on forces affecting it.
 	void applyForces(float dt);
 
+	//The direction from where the camera currently is focused to the focus
 	glm::vec3 dirToCenter();
 
+	//Reduces the shake amount and sometimes changes the direction
+	void updateShake(float dt);
+
+	//Returns a random normalized direction
+	glm::vec3 randomDir();
+
+	glm::vec3 shakeForce() { return shakeAmount * shakeDir; }
 
 public:
 
@@ -44,6 +68,11 @@ public:
 
 	DynamicCamera(float fov, float near, float far) : fov(fov), near(near), far(far), viewDirection(defaultRotation) {}
 
+	//Shake the camera
+	//Current model uses single instance of force
+	//Amount is intensity and duration in seconds
+	void shake(float amount);
+	
 	//Returns the direction the camera is facing
 	glm::vec3 getViewDir();
 
