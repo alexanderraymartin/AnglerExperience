@@ -74,7 +74,7 @@ void RenderSystem::geometryPass(GameState &gstate) {
 	drawEntities(gstate.activeScene, deferred_export);
 }
 
-void RenderSystem::render(ApplicationState &appstate, GameState &gstate, double elapsedTime){
+void RenderSystem::render(ApplicationState &appstate, GameState &gstate, double elapsedTime, bool hasPostProcessing){
   
   geometryPass(gstate);
 
@@ -88,7 +88,7 @@ void RenderSystem::render(ApplicationState &appstate, GameState &gstate, double 
   updateCaustic();
   applyShading(gstate.activeScene, *shaderlib);
 
-  PostProcessor::doPostProcessing(render_out_color, deferred_buffers.depthBuffer);
+  PostProcessor::doPostProcessing(render_out_color, deferred_buffers.depthBuffer, hasPostProcessing);
 }
 
 // This function is aweful and I hate it.

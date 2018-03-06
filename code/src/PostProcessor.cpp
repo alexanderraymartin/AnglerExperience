@@ -35,70 +35,90 @@ void PostProcessor::init(int _w_width, int _w_height, ShaderLibrary* _shaderlib)
   }
 }
 
-void PostProcessor::doPostProcessing(GLuint texture, GLuint depthBuffer)
+void PostProcessor::doPostProcessing(GLuint texture, GLuint depthBuffer, bool hasPostProcessing)
 {
   int lastout;
-  //lastout = processBloom(texture, false);
-  lastout = processDepthOfField(texture, depthBuffer, false);
-  //lastout = processDepthOfField(texBuf[lastout], depthBuffer, false);
-  //lastout = runFXAA(texture, true);
-  lastout = runFXAA(texBuf[lastout], true);
+  
+  if (hasPostProcessing) {
+    lastout = processBloom(texture, false);
+    lastout = processDepthOfField(texBuf[lastout], depthBuffer, false);
+    lastout = runFXAA(texBuf[lastout], true);
+  }
+  else {
+	passThroughShader(texture);
+  }
 }
+
+void PostProcessor::passThroughShader(GLuint texture)
+{
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, texture);
+  
+  Program * prog = shaderlib->getPtr("passthru");
+  prog->bind();
+  glUniform1i(prog->getUniform("pixtex"), 0);
+  PostProcessor::drawFSQuad();
+  prog->unbind();
+}
+
 
 int PostProcessor::processBloom(GLuint texture, bool isLast)
 {
-  int fboID1 = nextFBO();
+  int fboID1 = nextLowResFBO();
   int fboID2 = nextLowResFBO();
-  int fboID3 = nextLowResFBO();
+  int fboID3 = nextFBO();
   
   // Bright filter
   glViewport(0, 0, w_width / LOW_RES_FBO_SCALE, w_height / LOW_RES_FBO_SCALE);
-  applyBrightFilter(texture, lowResFrameBuf[fboID2], shaderlib->getPtr("bloom_brightFilter"));
+  applyBrightFilter(texture, lowResFrameBuf[fboID1], shaderlib->getPtr("bloom_brightFilter"));
 
   for (int i = 0; i < BLOOM_BLUR_AMOUNT; i++)
   {
     // Horizontal blur
-	applyBlur(lowResTexBuf[fboID2], lowResFrameBuf[fboID3], shaderlib->getPtr("bloom_horizontalBlur"));
+	applyBlur(lowResTexBuf[fboID1], lowResFrameBuf[fboID2], shaderlib->getPtr("bloom_horizontalBlur"));
     
     // Vertical blur
-	applyBlur(lowResTexBuf[fboID3], lowResFrameBuf[fboID2], shaderlib->getPtr("bloom_verticalBlur"));
+	applyBlur(lowResTexBuf[fboID2], lowResFrameBuf[fboID1], shaderlib->getPtr("bloom_verticalBlur"));
   }
 
   // Combine
   glViewport(0, 0, w_width, w_height);
-  applyBloomCombine(texture, lowResTexBuf[fboID2], isLast ? 0 : frameBuf[fboID1], shaderlib->getPtr("bloom_combine"));
+  applyBloomCombine(texture, lowResTexBuf[fboID1], isLast ? 0 : frameBuf[fboID3], shaderlib->getPtr("bloom_combine"));
   ASSERT_NO_GLERR();
-  return fboID1;
+  return fboID3;
 }
 
 int PostProcessor::processDepthOfField(GLuint texture, GLuint depthBuffer, bool isLast)
 {
-	int fboID1 = nextLowResFBO();
-	int fboID2 = nextLowResFBO();
-	int fboID3 = nextFBO();
-
-	// Horizontal blur 1st pass
-	glViewport(0, 0, w_width / LOW_RES_FBO_SCALE, w_height / LOW_RES_FBO_SCALE);
-	applyBlur(texture, lowResFrameBuf[fboID1], shaderlib->getPtr("bloom_horizontalBlur"));
-
-	// Vertical blur 1st pass
-	applyBlur(lowResTexBuf[fboID1], lowResFrameBuf[fboID2], shaderlib->getPtr("bloom_verticalBlur"));
-
-	for (int i = 0; i < DEPTH_OF_FIELD_BLUR_AMOUNT - 1; i++)
-	{
-		// Horizontal blur mutli-pass
-		applyBlur(lowResTexBuf[fboID2], lowResFrameBuf[fboID1], shaderlib->getPtr("bloom_horizontalBlur"));
-
-		// Vertical blur mutli-pass
-		applyBlur(lowResTexBuf[fboID1], lowResFrameBuf[fboID2], shaderlib->getPtr("bloom_verticalBlur"));
-	}
-	
-	// Combine blur with full res texture
-	glViewport(0, 0, w_width, w_height);
-	applyDepthOfFieldCombine(texture, lowResTexBuf[fboID2], depthBuffer, isLast ? 0 : frameBuf[fboID3], shaderlib->getPtr("depthOfField_depthOfFieldCombine"));
-
-	ASSERT_NO_GLERR();
-	return fboID3;
+  int fboID1 = nextLowResFBO();
+  int fboID2 = nextLowResFBO();
+  int fboID3 = nextFBO();
+  
+  // Horizontal blur 1st pass
+  glViewport(0, 0, w_width / LOW_RES_FBO_SCALE, w_height / LOW_RES_FBO_SCALE);
+  applyBlur(texture, lowResFrameBuf[fboID1], shaderlib->getPtr("depthOfField_horizontalBlur"));
+  
+  // Vertical blur 1st pass
+  applyBlur(lowResTexBuf[fboID1], lowResFrameBuf[fboID2], shaderlib->getPtr("depthOfField_verticalBlur"));
+  
+  for (int i = 0; i < DEPTH_OF_FIELD_BLUR_AMOUNT - 1; i++)
+  {
+    // Horizontal blur mutli-pass
+    applyBlur(lowResTexBuf[fboID2], lowResFrameBuf[fboID1], shaderlib->getPtr("depthOfField_horizontalBlur"));
+    
+    // Vertical blur mutli-pass
+    applyBlur(lowResTexBuf[fboID1], lowResFrameBuf[fboID2], shaderlib->getPtr("depthOfField_verticalBlur"));
+  }
+  
+  // Combine blur with full res texture
+  glViewport(0, 0, w_width, w_height);
+  applyDepthOfFieldCombine(texture, lowResTexBuf[fboID2], depthBuffer, isLast ? 0 : frameBuf[fboID3], shaderlib->getPtr("depthOfField_depthOfFieldCombine"));
+  
+  ASSERT_NO_GLERR();
+  return fboID3;
 }
 
 int PostProcessor::runFXAA(GLuint texture, bool isLast)
@@ -168,22 +188,22 @@ static void createFBO(int w_width, int w_height, GLuint& fb, GLuint& tex, GLenum
 /* Depth of Field */
 static void applyDepthOfFieldCombine(GLuint tex, GLuint blurredTex, GLuint depthBuffer, GLuint fbo, Program* prog)
 {
-	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, tex);
-	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, blurredTex);
-	glActiveTexture(GL_TEXTURE2);
-	glBindTexture(GL_TEXTURE_2D, depthBuffer);
-
-	prog->bind();
-	glUniform1i(prog->getUniform("tex"), 0);
-	glUniform1i(prog->getUniform("blurredTex"), 1);
-	glUniform1i(prog->getUniform("depthBufTex"), 2);
-	PostProcessor::drawFSQuad();
-	prog->unbind();
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, tex);
+  glActiveTexture(GL_TEXTURE1);
+  glBindTexture(GL_TEXTURE_2D, blurredTex);
+  glActiveTexture(GL_TEXTURE2);
+  glBindTexture(GL_TEXTURE_2D, depthBuffer);
+  
+  prog->bind();
+  glUniform1i(prog->getUniform("tex"), 0);
+  glUniform1i(prog->getUniform("blurredTex"), 1);
+  glUniform1i(prog->getUniform("depthBufTex"), 2);
+  PostProcessor::drawFSQuad();
+  prog->unbind();
 }
 
 /////////////////////////////////////////////

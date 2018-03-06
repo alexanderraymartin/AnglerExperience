@@ -15,8 +15,8 @@
 #define POSTPROCESSOR_BUFFER_COUNT 2
 #define POSTPROCESSOR_LOW_RES_BUFFER_COUNT 2
 
-#define BLOOM_BLUR_AMOUNT 6
-#define DEPTH_OF_FIELD_BLUR_AMOUNT 6
+#define BLOOM_BLUR_AMOUNT 3
+#define DEPTH_OF_FIELD_BLUR_AMOUNT 3
 #define LOW_RES_FBO_SCALE 4
 
 namespace PostProcessor{
@@ -42,7 +42,8 @@ namespace PostProcessor{
 
   void init(int w_width, int w_height, ShaderLibrary* shaderlib);
 
-  void doPostProcessing(GLuint texture, GLuint depthBuffer);
+  void doPostProcessing(GLuint texture, GLuint depthBuffer, bool hasPostProcessing);
+  void passThroughShader(GLuint texture);
   int processBloom(GLuint texture, bool isLast);
   int runFXAA(GLuint texture, bool isLast);
   int processDepthOfField(GLuint texture, GLuint depthBuffer, bool isLast);
@@ -57,7 +58,6 @@ namespace PostProcessor{
   static UINT offsetFBO(int offset) {return(ABS(_nextFBO + offset) % POSTPROCESSOR_BUFFER_COUNT);}
 
   static void resize(int w_width, int w_height) {init(w_width, w_height, shaderlib);};
-
 }
 
 #endif

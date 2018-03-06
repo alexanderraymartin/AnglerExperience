@@ -65,7 +65,7 @@ namespace RenderSystem{
 
   void init(ApplicationState &appstate);
 
-  void render(ApplicationState &appstate, GameState &gstate, double elapsedTime);
+  void render(ApplicationState &appstate, GameState &gstate, double elapsedTime, bool hasPostProcessing);
 
   void updateLighting(Scene* scene);
 
@@ -79,10 +79,7 @@ namespace RenderSystem{
 
   void drawEntity(const Entity* entity, Program* shader);
 
-  void runFXAA();
-
   void onResize(GLFWwindow *window, int width, int height);
-
 
   void initDepthUniforms(double causticOrtho, double shadowOrtho);
 

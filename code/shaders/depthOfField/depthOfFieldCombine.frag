@@ -20,7 +20,7 @@ void main(){
 	color = mix(texture(tex, NDC), texture(blurredTex, NDC), linearizeDepth(depthValue));
 	
 	///////////////////////////////////////////
-	// TODO remove after this testing works	
+	// TODO remove after this works	
 	//float depth = texture(depthBufTex, NDC).r;
 	//float linDepth = linearizeDepth(depth);
 	//color.r = depth;
