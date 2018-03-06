@@ -17,7 +17,7 @@ protected:
 	//The direction the camera is facing
 	glm::vec3 viewDirection;
 	//The 3 angular velocities of the camera. Z can not change in our current implementation so the up-vector will not change.
-	glm::vec3 velocity;
+	glm::vec3 velocity = vec3(0.0);
 
 	//If you don't like these numbers, mess with them until you like them.
 	//The amount of force the user pushes with
