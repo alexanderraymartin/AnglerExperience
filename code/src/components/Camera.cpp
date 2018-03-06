@@ -19,7 +19,7 @@ void DynamicCamera::update(GLFWwindow* window, float dt) {
 		userForce += vec3(-INPUT_FORCE, 0.0f, 0.0f);
 	}
 	if (glfwGetKey(window, GLFW_KEY_R)) {
-		shake(shakeAmount + 0.3f);
+		shake(3.0f, 5.0f);
 	}
 	if (userForce != vec3(0.0)) {
 		userForce = normalize(userForce) * INPUT_FORCE;
@@ -91,9 +91,11 @@ glm::mat4 DynamicCamera::getView() {
 	);
 }
 
-void DynamicCamera::shake(float amount) {
+void DynamicCamera::shake(float amount, float duration) {
 	shakeDir = randomDir();
-	shakeAmount = amount;
+	shakeAmount = shakeBaseForce = amount;
+	shakeDuration = duration;
+	shakeTimePassed = 0;
 }
 
 vec3 DynamicCamera::randomDir() {
@@ -103,9 +105,11 @@ vec3 DynamicCamera::randomDir() {
 }
 
 void DynamicCamera::updateShake(float dt) {
-	float newAmt = shakeAmount - SHAKE_DECAY_RATE * dt;
+	shakeTimePassed += dt;
+	float newAmt = shakeBaseForce * (1 - shakeTimePassed / shakeDuration);
 	if (newAmt > 0) {
-		if ((((int)newAmt* SHAKE_CHANGE_RATE) - ((int)shakeAmount * SHAKE_CHANGE_RATE)) != 0) {
+		//This uses int casting and integer addition to change the direction of the camera shake SHAKE_CHANGE_RATE times per second
+		if (((int)(shakeTimePassed * SHAKE_CHANGE_RATE)) - (int)((shakeTimePassed - dt) * SHAKE_CHANGE_RATE) != 0) {
 			shakeDir = randomDir();
 		}
 		shakeAmount = newAmt;

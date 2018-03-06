@@ -31,10 +31,15 @@ protected:
 	float FRICTION_CONSTANT = 3.0f;
 	//The more mass, the slower all accelerations are.
 	float CAMERA_MASS = 1.0f;
-	//The amount of force reduced per second
-	float SHAKE_DECAY_RATE = 1.0f;
 	//The amount of times per second that the shake direction should change
-	int SHAKE_CHANGE_RATE = 15;
+	int SHAKE_CHANGE_RATE = 10;
+
+	//The number of seconds the camera will shake for
+	float shakeDuration;
+	//The amount of time passed since the shaking started
+	float shakeTimePassed;
+	//The origional force used to shake the camera
+	float shakeBaseForce;
 
 	//Field of view in degrees
 	float fov;
@@ -60,6 +65,7 @@ protected:
 	//Returns a random normalized direction
 	glm::vec3 randomDir();
 
+	//Calculate the shakeForce based on the amount and direction
 	glm::vec3 shakeForce() { return shakeAmount * shakeDir; }
 
 public:
@@ -71,7 +77,7 @@ public:
 	//Shake the camera
 	//Current model uses single instance of force
 	//Amount is intensity and duration in seconds
-	void shake(float amount);
+	void shake(float amount, float duration);
 	
 	//Returns the direction the camera is facing
 	glm::vec3 getViewDir();
