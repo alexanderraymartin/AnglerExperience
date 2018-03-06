@@ -79,6 +79,10 @@ glm::vec3 DynamicCamera::getViewDir() {
 	return viewDirection;
 }
 
+glm::vec3 DynamicCamera::getLocation() {
+  return defaultLocation;
+}
+
 glm::mat4 DynamicCamera::getView() {
 	return glm::lookAt(
 		defaultLocation, //Location of the camera

@@ -44,6 +44,9 @@ public:
 
 	DynamicCamera(float fov, float near, float far) : fov(fov), near(near), far(far), viewDirection(defaultRotation) {}
 
+  //Returns the location of the camera
+  glm::vec3 getLocation();
+
 	//Returns the direction the camera is facing
 	glm::vec3 getViewDir();
 
