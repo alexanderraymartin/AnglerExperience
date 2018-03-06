@@ -5,15 +5,18 @@ in vec3 FragPos;
 out vec4 color;
 uniform sampler2D tex;
 
-uniform float offset[7] = float[](0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0);
-uniform float weight[7] = float[](0.00598, 0.060626, 0.241843, 0.383103, 0.241843, 0.060626, 0.00598);
+const int kernelSize = 7;
+uniform float offset[kernelSize] = float[](0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0);
+uniform float weight[kernelSize] = float[](0.197448, 0.174697, 0.120999, 0.065602, 0.02784, 0.009246, 0.002403);
+
+uniform vec2 resolution;
 
 void main(){
 	vec2 NDC = ((FragPos.xy + 1.0) * .5);
 	color = vec4(texture(tex, NDC).rgb, 1)*weight[0];
 
-	for (int i=1; i < 7; i ++) {
-		color += vec4(texture(tex, NDC + vec2(0.0, offset[i])/512.0).rgb, 1)*weight[i];
-		color += vec4(texture(tex, NDC - vec2(0.0, offset[i])/512.0).rgb, 1)*weight[i];
+	for (int i=1; i < kernelSize; i ++) {
+		color += vec4(texture(tex, NDC + vec2(0.0, offset[i])/resolution).rgb, 1)*weight[i];
+		color += vec4(texture(tex, NDC - vec2(0.0, offset[i])/resolution).rgb, 1)*weight[i];
 	}
 }
