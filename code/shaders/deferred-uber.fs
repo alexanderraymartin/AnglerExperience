@@ -85,7 +85,8 @@ void main()
     float fogDensity = .051;
     float linearDepth = FragPos.z-4;
     float fog = 1.0 - clamp(exp(-fogDensity*linearDepth), 0.0, 1.0); 
-    lighting = mix (lighting, vec3(0.7), fog);
+    vec3 fogColor = vec3(0.2, 0.2, 0.3);
+    lighting = mix (lighting, fogColor, fog + BackMask);
 
 /*
     // create a ball of fog
