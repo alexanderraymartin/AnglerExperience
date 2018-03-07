@@ -88,24 +88,5 @@ void main()
     vec3 fogColor = vec3(0.2, 0.2, 0.3);
     lighting = mix (lighting, fogColor, fog + BackMask);
 
-/*
-    // create a ball of fog
-    vec3 line = normalize(FragPos - viewPos);
-    vec3 orig = FragPos;
-    vec3 center = vec3(0.5, 3, 7);
-    float radius = 0.5;
-
-    float firstpart = -(dot(line, (orig - center)));
-    float stuffundersqrt = pow(firstpart, 2) - pow(length(orig - center), 2) + radius*radius;
-*/
-    /* If it intersects the circle, do fog */
-/*
-    if (stuffundersqrt > 0) {
-        float secondpart = sqrt(stuffundersqrt);
-        float dist = distance(firstpart + secondpart, firstpart - secondpart);
-        lighting = mix(lighting, vec3(0.7), dist / radius / 3.0);
-    }
-*/
-  
   FragColor = vec4(lighting, 1.0);
 }
