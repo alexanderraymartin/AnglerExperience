@@ -121,7 +121,7 @@ static void drawEntity(const Entity* entity, RenderSystem::MVPset &MVP, ShaderLi
       mesh2 = anim->getNextMesh();
       for (int i = 0; i < mesh->geometries.size(); i++) {
         drawGeometry(mesh->geometries[i], &mesh2->geometries[i],
-          MVP, shaderlib.getActive(), anim->dtLastKeyFrame / anim->timePerKeyFrame);
+          MVP, shaderlib.getActive(), anim->dtLastKeyFrame / anim->timeForKeyFrame());
       }
       return;
     }

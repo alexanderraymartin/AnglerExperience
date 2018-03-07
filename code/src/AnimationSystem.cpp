@@ -65,10 +65,7 @@ static void updateLinearAnimations(Entity* entity, double dt){
 
 static void updateAnimatableMesh(AnimatableMesh *anim, double dt) {
   anim->dtLastKeyFrame += dt;
-  if (anim->dtLastKeyFrame > anim->timePerKeyFrame) {
-    anim->index = (anim->index + 1) % anim->meshes.size();
-    anim->dtLastKeyFrame = 0;
-  }
+  anim->updateKeyFrame();
 }
 
 static void runLinearAnim(Component* linear, Pose* pose, double dt){
