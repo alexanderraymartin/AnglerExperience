@@ -57,21 +57,21 @@ void RenderSystem::init(ApplicationState &appstate){
 }
 
 void RenderSystem::setMVP(Camera* camera) {
-	MVP.P = MatrixStack(camera->getPerspective(static_cast<double>(w_width) / w_height));
-	MVP.M.loadIdentity();
-	MVP.V = MatrixStack(camera->getView());
+  MVP.P = MatrixStack(camera->getPerspective(static_cast<double>(w_width) / w_height));
+  MVP.M.loadIdentity();
+  MVP.V = MatrixStack(camera->getView());
 }
 
 void RenderSystem::geometryPass(GameState &gstate) {
-	Camera* camera;
-	if (!(camera = gstate.activeScene->camera)) {
-		return;
-	}
+  Camera* camera;
+  if (!(camera = gstate.activeScene->camera)) {
+    return;
+  }
 
-	setMVP(camera);
+  setMVP(camera);
 
-	prepareDeferred(deferred_buffers.gBuffer);
-	drawEntities(gstate.activeScene, deferred_export);
+  prepareDeferred(deferred_buffers.gBuffer);
+  drawEntities(gstate.activeScene, deferred_export);
 }
 
 void RenderSystem::render(ApplicationState &appstate, GameState &gstate, double elapsedTime){
@@ -303,11 +303,11 @@ static void initDeferredBuffers(int width, int height, RenderSystem::Buffers &bu
   glGenFramebuffers(1, &(buffers.gBuffer));
   glBindFramebuffer(GL_FRAMEBUFFER, buffers.gBuffer);
   //32 bit floats may not be supported on some systems.
-  createGBufAttachment(width, height, buffers.buffers, GL_RGB16F, GL_RGB, GL_FLOAT);		//position buffer
-  createGBufAttachment(width, height, buffers.buffers, GL_RGB16F, GL_RGB, GL_FLOAT);		//normal buffer
-  createGBufAttachment(width, height, buffers.buffers, GL_RGBA, GL_RGBA, GL_UNSIGNED_INT);	//color/emit buffer
-  createGBufAttachment(width, height, buffers.buffers, GL_RGBA, GL_RGBA, GL_UNSIGNED_INT);	// Specular/shine buffer
-  setGBufDepth(width, height, buffers);														//Depth buffer
+  createGBufAttachment(width, height, buffers.buffers, GL_RGB16F, GL_RGB, GL_FLOAT);    //position buffer
+  createGBufAttachment(width, height, buffers.buffers, GL_RGB16F, GL_RGB, GL_FLOAT);    //normal buffer
+  createGBufAttachment(width, height, buffers.buffers, GL_RGBA, GL_RGBA, GL_UNSIGNED_INT);  //color/emit buffer
+  createGBufAttachment(width, height, buffers.buffers, GL_RGBA, GL_RGBA, GL_UNSIGNED_INT);  // Specular/shine buffer
+  setGBufDepth(width, height, buffers);                           //Depth buffer
   setGBufAttachment(buffers);
   if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
     fprintf(stderr, "Framebuffer not complete!\n");

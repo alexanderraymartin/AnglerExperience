@@ -40,9 +40,9 @@ void PostProcessor::doPostProcessing(GLuint texture, GLuint depthBuffer)
   int lastout;
 
   if (HAS_POST_PROCESSING) {
-    lastout = processBloom(texture, false);
-    lastout = processDepthOfField(texBuf[lastout], depthBuffer, false);
-    lastout = runFXAA(texBuf[lastout], true);
+    lastout = runFXAA(texture, false);
+    lastout = processBloom(texBuf[lastout], false);
+    lastout = processDepthOfField(texBuf[lastout], depthBuffer, true);
   }
   else {
 	passThroughShader(texture);
