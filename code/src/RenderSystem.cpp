@@ -74,7 +74,7 @@ void RenderSystem::geometryPass(GameState &gstate) {
 	drawEntities(gstate.activeScene, deferred_export);
 }
 
-void RenderSystem::render(ApplicationState &appstate, GameState &gstate, double elapsedTime, bool hasPostProcessing){
+void RenderSystem::render(ApplicationState &appstate, GameState &gstate, double elapsedTime){
   
   geometryPass(gstate);
 
@@ -88,7 +88,7 @@ void RenderSystem::render(ApplicationState &appstate, GameState &gstate, double 
   updateCaustic();
   applyShading(gstate.activeScene, *shaderlib);
 
-  PostProcessor::doPostProcessing(render_out_color, deferred_buffers.depthBuffer, hasPostProcessing);
+  PostProcessor::doPostProcessing(render_out_color, deferred_buffers.depthBuffer);
 }
 
 // This function is aweful and I hate it.
@@ -286,16 +286,16 @@ static void createGBufAttachment(int width, int height, vector<unsigned int> &bu
 }
 
 static void setGBufDepth(int width, int height, RenderSystem::Buffers &buffers) {
-	glGenTextures(1, &buffers.depthBuffer);
-	glBindTexture(GL_TEXTURE_2D, buffers.depthBuffer);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, width, height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, buffers.depthBuffer, 0);
-	glDrawBuffer(GL_NONE);
-	glReadBuffer(GL_NONE);
+  glGenTextures(1, &buffers.depthBuffer);
+  glBindTexture(GL_TEXTURE_2D, buffers.depthBuffer);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, width, height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, buffers.depthBuffer, 0);
+  glDrawBuffer(GL_NONE);
+  glReadBuffer(GL_NONE);
 }
 
 static void initDeferredBuffers(int width, int height, RenderSystem::Buffers &buffers){
@@ -336,14 +336,14 @@ void RenderSystem::initCaustics() {
   causticDir = "" STRIFY(ASSET_DIR) "/caustics";
 
   for (int i = 0; i < CAUSTIC_COUNT; i++) {
-      char filename[80];
-      sprintf(filename, "/caustic%02d.jpg", i + 1);
-
-      caustics[i] = make_shared<Texture>();
-      caustics[i]->setFilename(causticDir + filename);
-      caustics[i]->init();
-      caustics[i]->setUnit(deferred_buffers.buffers.size() + i);
-      caustics[i]->setWrapModes(GL_REPEAT, GL_REPEAT);
+    char filename[80];
+    sprintf(filename, "/caustic%02d.jpg", i + 1);
+    
+    caustics[i] = make_shared<Texture>();
+    caustics[i]->setFilename(causticDir + filename);
+    caustics[i]->init();
+    caustics[i]->setUnit(deferred_buffers.buffers.size() + i);
+    caustics[i]->setWrapModes(GL_REPEAT, GL_REPEAT);
   }
 }
 

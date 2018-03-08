@@ -65,7 +65,7 @@ namespace RenderSystem{
 
   void init(ApplicationState &appstate);
 
-  void render(ApplicationState &appstate, GameState &gstate, double elapsedTime, bool hasPostProcessing);
+  void render(ApplicationState &appstate, GameState &gstate, double elapsedTime);
 
   void updateLighting(Scene* scene);
 

@@ -54,7 +54,6 @@ static void initScene(ApplicationState &appstate, GameState &gstate, Camera* cam
 
 static GLFWmonitor* autoDetectScreen(UINT* width, UINT* height);
 static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
-bool hasPostProcessing = true;
 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
         // END Forward Declarations
@@ -104,7 +103,7 @@ int main(int argc, char** argv){
     // try and keep all that linked together inside of the single RenderSystem for simplicity and
     // so that not buffers or other data has to be shared between calls here in main(). 
 
-    RenderSystem::render(appstate, gstate, dt, hasPostProcessing);
+    RenderSystem::render(appstate, gstate, dt);
 
     glfwSwapBuffers(appstate.window);
     glfwPollEvents();
@@ -384,7 +383,4 @@ static GLFWmonitor* autoDetectScreen(UINT* width, UINT* height){
 static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods){
   if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
     glfwSetWindowShouldClose(window, GL_TRUE);
-  if (key == GLFW_KEY_TAB && action == GLFW_PRESS) {
-    hasPostProcessing = !hasPostProcessing;
-  }
 }
