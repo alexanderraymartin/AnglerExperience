@@ -35,6 +35,7 @@
 
 #include "RenderSystem.hpp"
 #include "AnimationSystem.hpp"
+#include "PostProcessor.h"
 
 using namespace std;
 
@@ -279,8 +280,48 @@ static void initScene(ApplicationState &appstate, GameState &gstate, Camera* cam
     cube->attach(pose);
   }
 
+
+  Entity* cube2;
+  {
+    cube2 = new Entity();
+    
+    Material mat("" STRIFY(ASSET_DIR) "/simple-phong.mat");
+    
+    vector<Geometry> cubegeo;
+    Geometry::loadFullObj("" STRIFY(ASSET_DIR) "/cube.obj", cubegeo);
+    
+    SolidMesh* mesh = new SolidMesh(cubegeo);
+    mesh->setMaterial(mat);
+    
+    Pose* pose = new Pose(glm::vec3(0, 3, 2));
+    pose->scale = glm::vec3(0.1, 0.1, 0.1);
+    pose->orient = glm::angleAxis(glm::radians(45.0f), glm::vec3(0, 1, 0));
+    cube2->attach(mesh);
+    cube2->attach(pose);
+  }
+
+  Entity* cube3;
+  {
+    cube3 = new Entity();
+    
+    Material mat("" STRIFY(ASSET_DIR) "/simple-phong.mat");
+    
+    vector<Geometry> cubegeo;
+    Geometry::loadFullObj("" STRIFY(ASSET_DIR) "/cube.obj", cubegeo);
+    
+    SolidMesh* mesh = new SolidMesh(cubegeo);
+    mesh->setMaterial(mat);
+    
+    Pose* pose = new Pose(glm::vec3(2, 3, 30));
+    pose->scale = glm::vec3(0.1, 0.1, 0.1);
+    pose->orient = glm::angleAxis(glm::radians(45.0f), glm::vec3(0, 1, 0));
+    cube3->attach(mesh);
+    cube3->attach(pose);
+  }
   gstate.activeScene->addEntity(groundplane);
   gstate.activeScene->addEntity(cube);
+  gstate.activeScene->addEntity(cube2);
+  gstate.activeScene->addEntity(cube3);
 
   gstate.activeScene->addEntity(sun);
   gstate.activeScene->addEntity(pointlight);
