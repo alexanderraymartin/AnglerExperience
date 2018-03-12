@@ -1,10 +1,10 @@
 #version 330 core
 layout (location = 0) in vec3 aPos;
 
-out vec3 FragPos;
+out vec2 TexCoords;
 
 void main()
 {
-	FragPos = aPos;
+    TexCoords = ((aPos.xy + 1.0) * .5);
     gl_Position = vec4(aPos, 1.0);
 }

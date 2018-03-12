@@ -17,27 +17,80 @@
 #include "Entity.hpp"
 #include "Component.hpp"
 
+#include "utility/Texture.h"
+
 namespace RenderSystem{
 
-	// Any render settings should be declared here as 'static'
-	static int w_width, w_height;
+  // Any render settings should be declared here as 'static'
+  static int w_width, w_height;
 
-	// Any data structures used inbetween renders should also be stored here as static
-	static GLuint FBOpair[2]; 
+  static GLuint render_out_FBO;
+  static GLuint render_out_color;
+  static Program* deferred_export = NULL;
+  static Program* deferred_uber = NULL;
+  static Program* deferred_shadow = NULL;
 
-	struct MVPset{
-		MatrixStack M;
-		MatrixStack V;
-		MatrixStack P;
-	};
+  static ShaderLibrary* shaderlib = NULL;
+  
+  struct Buffers {
+    std::vector<unsigned int> buffers;
+    unsigned int gBuffer, depthBuffer;
+  };
 
-	static MVPset MVP;
+  static Buffers deferred_buffers;
 
-	void init(ApplicationState &appstate);
+  struct MVPset {
+    MatrixStack M;
+    MatrixStack V;
+    MatrixStack P;
+  };
 
-	void render(ApplicationState &appstate, GameState &gstate, double elapsedTime);
+  static MVPset MVP;
 
-	void onResize(GLFWwindow *window, int width, int height);
+  struct DepthSet {
+    MatrixStack lightView;
+    MatrixStack causticOrtho;
+    MatrixStack shadowOrtho;
+    MatrixStack bias;
+  };
+
+  const static int CAUSTIC_COUNT = 32;
+  static DepthSet depthSet;
+  static int currCaustic = 0;
+  static string causticDir;
+  static std::shared_ptr<Texture> caustics[CAUSTIC_COUNT];
+
+  static GLuint shadowFramebuffer;
+  static GLuint shadowTexture;
+
+  void init(ApplicationState &appstate);
+
+  void render(ApplicationState &appstate, GameState &gstate, double elapsedTime);
+
+  void updateLighting(Scene* scene);
+
+  void applyShading(Scene* scene, ShaderLibrary &shaderlib);
+
+  void drawEntities(Scene* scene, Program* shader);
+
+  void drawEntity(const Entity* entity, Program* shader);
+
+  void runFXAA();
+
+  void onResize(GLFWwindow *window, int width, int height);
+
+
+  void initDepthUniforms(double causticOrtho, double shadowOrtho);
+
+  void updateDepthUniforms();
+
+  void initCaustics();
+
+  void updateCaustic();
+
+  void initShadowMap(int width, int height);
+
+  void updateShadowMap();
 
 };
 

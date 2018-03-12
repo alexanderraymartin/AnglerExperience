@@ -21,7 +21,9 @@ public:
   // Same as calling builFromJSONArray
   Program(const json &program_obj);
 
-  Program(istream *vertex, istream *fragment);
+  Program(istream &vertex, istream &fragment);
+
+  Program(const string &vpath, const string &fpath);
   
   virtual ~Program();
   
@@ -36,7 +38,7 @@ public:
   
   // Build the classic vertex shader -> fragment shader program from two GLSL sources
   // Returns true if program compiled and linked properly false otherwise
-  bool buildVsFsProgram(istream *vertex, istream *fragment);
+  bool buildVsFsProgram(istream &vertex, istream &fragment);
 
   // Build from a JSON array containing shader specifications. Program will be linked in order given. 
   // Structure should be as follows
@@ -67,6 +69,8 @@ public:
 
   GLint getAttribute(const string &name);
   GLint getUniform(const string &name);
+  bool hasAttribute(const string &name);
+  bool hasUniform(const string &name);
   
 private:
   GLuint pid;
