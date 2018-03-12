@@ -8,6 +8,7 @@
 
 #include "PostProcessor.h"
 #include "components/SimpleComponents.hpp"
+#include "components/AnimationComponents.hpp"
 #include "components/Geometry.hpp"
 #include "LightingComponents.hpp"
 
@@ -28,6 +29,8 @@ static void setGBufAttachment(RenderSystem::Buffers &buffers);
 static void setGBufDepth(int width, int height, RenderSystem::Buffers &buffers);
 
 static void drawGeometry(const Geometry &geomcomp, RenderSystem::MVPset &MVP, Program* shader);
+static void drawGeometry(const Geometry &geomcomp, const Geometry *geomcomp2, 
+  RenderSystem::MVPset &MVP, Program* shader, double interp);
 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
         // RenderSystem functions
@@ -158,12 +161,28 @@ void RenderSystem::drawEntities(Scene* scene, Program* shader){
 }
 
 void RenderSystem::drawEntity(const Entity* entity, Program* shader){
-  SolidMesh* mesh = NULL;
+  SolidMesh* mesh = NULL, *mesh2;
   Pose* pose = NULL;
+  AnimatableMesh* anim = NULL;
   for(Component *cmpnt : entity->components){
     GATHER_SINGLE_COMPONENT(mesh, SolidMesh*, cmpnt);
     GATHER_SINGLE_COMPONENT(pose, Pose*, cmpnt);
+    GATHER_SINGLE_COMPONENT(anim, AnimatableMesh*, cmpnt);
     
+    if (anim && pose) {
+      MVP.M.pushMatrix();
+      MVP.M.multMatrix(pose->getAffineMatrix());
+      mesh = anim->getCurrentMesh();
+      mesh2 = anim->getNextMesh();
+      for (int i = 0; i < mesh->geometries.size(); i++) {
+        drawGeometry(mesh->geometries[i], &mesh2->geometries[i],
+          MVP, shader, anim->dtLastKeyFrame / anim->timeForKeyFrame());
+      }
+      MVP.M.popMatrix();
+      mesh = mesh2 = NULL;
+      pose = NULL;
+      return;
+    }
     if(mesh && pose){
       MVP.M.pushMatrix();
       MVP.M.multMatrix(pose->getAffineMatrix());
@@ -186,14 +205,22 @@ void RenderSystem::drawEntity(const Entity* entity, Program* shader){
 }
 
 static void drawGeometry(const Geometry &geomcomp, RenderSystem::MVPset &MVP, Program* shader){
+  drawGeometry(geomcomp, NULL, MVP, shader, 0);
+}
+
+static void drawGeometry(const Geometry &geomcomp, const Geometry *geomcomp2, 
+  RenderSystem::MVPset &MVP, Program* shader, double interp){
   int h_pos, h_nor, h_tex;
+  int h_pos2, h_nor2, h_tex2;
   h_pos = h_nor = h_tex = -1;
+  h_pos2 = h_nor2 = h_tex2 = -1;
 
   geomcomp.material.apply(shader);
 
   glUniformMatrix4fv(shader->getUniform("M"), 1, GL_FALSE, value_ptr(MVP.M.topMatrix()));
   glUniformMatrix4fv(shader->getUniform("V"), 1, GL_FALSE, value_ptr(MVP.V.topMatrix()));
   glUniformMatrix4fv(shader->getUniform("P"), 1, GL_FALSE, value_ptr(MVP.P.topMatrix()));
+  glUniform1f(shader->getUniform("interp"), interp);
 
   glBindVertexArray(geomcomp.vaoID);
   // Bind position buffer
@@ -219,6 +246,33 @@ static void drawGeometry(const Geometry &geomcomp, RenderSystem::MVPset &MVP, Pr
       glVertexAttribPointer(h_tex, 2, GL_FLOAT, GL_FALSE, 0, (const void *)0);
     }
   }
+
+  if (geomcomp2) {
+    // Bind position buffer
+    h_pos2 = shader->getAttribute("vertPos2");
+    GLSL::enableVertexAttribArray(h_pos2);
+    glBindBuffer(GL_ARRAY_BUFFER, geomcomp2->posBufID);
+    glVertexAttribPointer(h_pos2, 3, GL_FLOAT, GL_FALSE, 0, (const void *)0);
+
+    // Bind normal buffer
+    h_nor2 = shader->getAttribute("vertNor2");
+    if(h_nor2 != -1 && geomcomp2->norBufID != 0) {
+      GLSL::enableVertexAttribArray(h_nor2);
+      glBindBuffer(GL_ARRAY_BUFFER, geomcomp2->norBufID);
+      glVertexAttribPointer(h_nor2, 3, GL_FLOAT, GL_FALSE, 0, (const void *)0);
+    }
+    
+    if (geomcomp2->texBufID != 0) {  
+      // Bind texcoords buffer
+      h_tex2 = shader->getAttribute("vertTex2");
+      if(h_tex2 != -1 && geomcomp2->texBufID != 0) {
+        GLSL::enableVertexAttribArray(h_tex2);
+        glBindBuffer(GL_ARRAY_BUFFER, geomcomp2->texBufID);
+        glVertexAttribPointer(h_tex2, 2, GL_FLOAT, GL_FALSE, 0, (const void *)0);
+      }
+    }
+
+  }
   
   // Bind element buffer
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, geomcomp.eleBufID);
@@ -234,6 +288,17 @@ static void drawGeometry(const Geometry &geomcomp, RenderSystem::MVPset &MVP, Pr
     GLSL::disableVertexAttribArray(h_nor);
   }
   GLSL::disableVertexAttribArray(h_pos);
+
+  if (geomcomp2) {
+    if(h_tex2 != -1) {
+      GLSL::disableVertexAttribArray(h_tex2);
+    }
+    if(h_nor2 != -1) {
+      GLSL::disableVertexAttribArray(h_nor2);
+    }
+    GLSL::disableVertexAttribArray(h_pos2);
+  }
+
   glBindBuffer(GL_ARRAY_BUFFER, 0);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
