@@ -156,11 +156,15 @@ void RenderSystem::onResize(GLFWwindow *window, int width, int height){
 
 void RenderSystem::drawEntities(Scene* scene, Program* shader){
   for(pair<const Entity*, Entity*> entpair : scene->entities){
-    drawEntity(entpair.second, shader);
+    drawEntity(entpair.second, shader, true);
+  }
+  while (!(renderq.empty())) {
+    drawEntity(renderq.front(), shader, false);
+    renderq.pop();
   }
 }
 
-void RenderSystem::drawEntity(const Entity* entity, Program* shader){
+void RenderSystem::drawEntity(const Entity* entity, Program* shader, bool buildq){
   SolidMesh* mesh = NULL, *mesh2;
   Pose* pose = NULL;
   AnimatableMesh* anim = NULL;
@@ -170,6 +174,10 @@ void RenderSystem::drawEntity(const Entity* entity, Program* shader){
     GATHER_SINGLE_COMPONENT(anim, AnimatableMesh*, cmpnt);
     
     if (anim && pose) {
+      if (buildq) {
+        renderq.push(entity);
+        return;
+      }
       MVP.M.pushMatrix();
       MVP.M.multMatrix(pose->getAffineMatrix());
       mesh = anim->getCurrentMesh();
