@@ -266,7 +266,6 @@ static void initScene(ApplicationState &appstate, GameState &gstate, Camera* cam
 
     Material mat("" STRIFY(ASSET_DIR) "/simple-phong.mat");
 
-
     vector<SolidMesh*> meshes;
     for (int i = 0; i < 19; i++) {
       vector<Geometry> minnowgeo;
@@ -287,8 +286,8 @@ static void initScene(ApplicationState &appstate, GameState &gstate, Camera* cam
 
   }
 
-  gstate.activeScene->addEntity(groundplane);
   gstate.activeScene->addEntity(minnow);
+  gstate.activeScene->addEntity(groundplane);
 
   gstate.activeScene->addEntity(sun);
   gstate.activeScene->addEntity(pointlight);
