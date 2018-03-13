@@ -35,8 +35,8 @@ def gather_shaders(path):
 	fullpath = pathutils.abspath(path)
 	foundvert = foundfrag = []
 	if(_version_info[0] < 3):
-		foundvert = old_recurse(fullpath, "*.vs", 1) + old_recurse(fullpath, "*.vert", 1);
-		foundfrag = old_recurse(fullpath, "*.fs", 1) + old_recurse(fullpath, "*.frag", 1);
+		foundvert = old_recurse(fullpath, "*.vs") + old_recurse(fullpath, "*.vert");
+		foundfrag = old_recurse(fullpath, "*.fs") + old_recurse(fullpath, "*.frag");
 	else:
 		foundvert = glob(fullpath+"/**/*.vs", recursive = True) + glob(fullpath+"/**/*.vert", recursive = True)
 		foundfrag = glob(fullpath+"/**/*.fs", recursive = True) + glob(fullpath+"/**/*.frag", recursive = True)
@@ -140,14 +140,12 @@ def parse_pair(line):
 		return(ref);
 	return(None);
 
-def old_recurse(path, pattern, depth):
+def old_recurse(path, pattern):
 	matches = []
 	itr = 0;
 	for root, dirs, files in os.walk(path):
 		for match in fnmatch.filter(files, pattern):
 			matches.append(pathutils.join(root, match))
-		if(itr >= depth):
-			break
 		itr+=1
 	return(matches)
 

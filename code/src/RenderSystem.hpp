@@ -70,16 +70,17 @@ namespace RenderSystem{
 
   void updateLighting(Scene* scene);
 
+  void setMVP(Camera* camera);
+
+  void geometryPass(GameState &gstate);
+
   void applyShading(Scene* scene, ShaderLibrary &shaderlib);
 
   void drawEntities(Scene* scene, Program* shader);
 
   void drawEntity(const Entity* entity, Program* shader, bool buildq);
 
-  void runFXAA();
-
   void onResize(GLFWwindow *window, int width, int height);
-
 
   void initDepthUniforms(double causticOrtho, double shadowOrtho);
 
