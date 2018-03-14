@@ -1,28 +1,32 @@
 #include "AntennaGenerator.hpp"
 
-AntennaGenerator::AntennaGenerator() : rings(15), ringVertices(30), radius(0.1f) {
-  cylinderVertexBuffer.resize((ringVertices * rings + 2) * 3);
-  cylinderIndexBuffer.resize(ringVertices * rings * 6);
+AntennaGenerator::AntennaGenerator() : rings(15), ringVertices(30), radius(0.05f) {
 
-  initCylinderFaces(rings, ringVertices);
+  vertexBuffer.resize((ringVertices * rings + 2) * 3);
+  normalBuffer.resize((ringVertices * rings + 2) * 3);
+  indexBuffer.resize(ringVertices * rings * 6);
+
+  initFaces(rings, ringVertices);
 }
 
 AntennaGenerator::AntennaGenerator(unsigned int _rings, unsigned int _ringVertices, float _radus) : rings(_rings), ringVertices(_ringVertices), radius(_radus) {
-  cylinderVertexBuffer.resize((ringVertices * rings + 2) * 3);
-  cylinderIndexBuffer.resize(ringVertices * rings * 6);
 
-  initCylinderFaces(rings, ringVertices);
+  vertexBuffer.resize((ringVertices * rings + 2) * 3);
+  normalBuffer.resize((ringVertices * rings + 2) * 3);
+  indexBuffer.resize(ringVertices * rings * 6);
+
+  initFaces(rings, ringVertices);
 }
 
-void AntennaGenerator::generateCylinderVertices(vector<vec3> points, int rings, int ringVertices, float radius) {
+void AntennaGenerator::generateVertices(vector<vec3> points, int rings, int ringVertices, float radius) {
 
-  cylinderVertexBuffer[0] = points[0].x;
-  cylinderVertexBuffer[1] = points[0].y;
-  cylinderVertexBuffer[2] =  points[0].z;
+  vertexBuffer[0] = points[0].x;
+  vertexBuffer[1] = points[0].y;
+  vertexBuffer[2] =  points[0].z;
 
-  cylinderVertexBuffer[ringVertices * rings * 3 + 3] = points[rings - 1].x;
-  cylinderVertexBuffer[ringVertices * rings * 3 + 4] = points[rings - 1].y;
-  cylinderVertexBuffer[ringVertices * rings * 3 + 5] = points[rings - 1].z;
+  vertexBuffer[ringVertices * rings * 3 + 3] = points[rings - 1].x;
+  vertexBuffer[ringVertices * rings * 3 + 4] = points[rings - 1].y;
+  vertexBuffer[ringVertices * rings * 3 + 5] = points[rings - 1].z;
 
   //Generate cylinder vertices
   for (int j = 0; j < rings; j++) {
@@ -43,22 +47,22 @@ void AntennaGenerator::generateCylinderVertices(vector<vec3> points, int rings, 
       angle = 2 * M_PI / ringVertices * i;
       baseIdx = 3 * (i + j * ringVertices + 1);
 
-      cylinderVertexBuffer[baseIdx] = radius * (cos(angle) * a.x + sin(angle) * b.x) + points[j].x;
-      cylinderVertexBuffer[baseIdx + 1] = radius * (cos(angle) * a.y + sin(angle) * b.y) + points[j].y;
-      cylinderVertexBuffer[baseIdx + 2] = radius * (cos(angle) * a.z + sin(angle) * b.z) + points[j].z;
+      vertexBuffer[baseIdx] = radius * (cos(angle) * a.x + sin(angle) * b.x) + points[j].x;
+      vertexBuffer[baseIdx + 1] = radius * (cos(angle) * a.y + sin(angle) * b.y) + points[j].y;
+      vertexBuffer[baseIdx + 2] = radius * (cos(angle) * a.z + sin(angle) * b.z) + points[j].z;
     }
   }
 }
 
-void AntennaGenerator::initCylinderFaces(int rings, int ringVertices) {
+void AntennaGenerator::initFaces(int rings, int ringVertices) {
 
   int  baseIdx = 0;
 
   //Generate front face indices
   for (int i = 0; i < ringVertices; i++) {
-    cylinderIndexBuffer[baseIdx++] = 0;
-    cylinderIndexBuffer[baseIdx++] = i + 1;
-    cylinderIndexBuffer[baseIdx++] = i + 2 > ringVertices ? i - ringVertices + 2: i + 2;
+    indexBuffer[baseIdx++] = 0;
+    indexBuffer[baseIdx++] = i + 1;
+    indexBuffer[baseIdx++] = i + 2 > ringVertices ? i - ringVertices + 2: i + 2;
   }
 
   //Genereate cylinder indices
@@ -67,20 +71,20 @@ void AntennaGenerator::initCylinderFaces(int rings, int ringVertices) {
     for (int j = 0; j < ringVertices; j++) {
       currVert = j + i * ringVertices + 1;
 
-      cylinderIndexBuffer[baseIdx++] = currVert;
-      cylinderIndexBuffer[baseIdx++] = currVert + ringVertices;
-      cylinderIndexBuffer[baseIdx++] = j < ringVertices - 1 ? currVert + 1 : currVert - ringVertices + 1;
-      cylinderIndexBuffer[baseIdx++] = currVert + ringVertices;
-      cylinderIndexBuffer[baseIdx++] = j < ringVertices - 1 ? currVert + ringVertices + 1: currVert + 1;
-      cylinderIndexBuffer[baseIdx++] = j < ringVertices - 1 ? currVert + 1 : currVert - ringVertices + 1;
+      indexBuffer[baseIdx++] = currVert;
+      indexBuffer[baseIdx++] = currVert + ringVertices;
+      indexBuffer[baseIdx++] = j < ringVertices - 1 ? currVert + 1 : currVert - ringVertices + 1;
+      indexBuffer[baseIdx++] = currVert + ringVertices;
+      indexBuffer[baseIdx++] = j < ringVertices - 1 ? currVert + ringVertices + 1: currVert + 1;
+      indexBuffer[baseIdx++] = j < ringVertices - 1 ? currVert + 1 : currVert - ringVertices + 1;
     }
   }
 
   //Generate back face indices
   for (int i = 0; i < ringVertices; i++) {
-    cylinderIndexBuffer[baseIdx++] = ringVertices * rings + 1;
-    cylinderIndexBuffer[baseIdx++] = ringVertices * rings - ringVertices + i + 1;
-    cylinderIndexBuffer[baseIdx++] = i + 2 > ringVertices ? ringVertices * rings - ringVertices * 2 + i + 2 : ringVertices * rings - ringVertices + i + 2;
+    indexBuffer[baseIdx++] = ringVertices * rings + 1;
+    indexBuffer[baseIdx++] = ringVertices * rings - ringVertices + i + 1;
+    indexBuffer[baseIdx++] = i + 2 > ringVertices ? ringVertices * rings - ringVertices * 2 + i + 2 : ringVertices * rings - ringVertices + i + 2;
   }
 }
 
@@ -107,5 +111,5 @@ vector<vec3> AntennaGenerator::generateBezierLine(vec3 origin, vec3 dest, int po
 
 void AntennaGenerator::generateAntenna(vec3 origin, vec3 dest) {
   vector<vec3> points = generateBezierLine(origin, dest, rings);
-  generateCylinderVertices(points, rings, ringVertices, radius);
+  generateVertices(points, rings, ringVertices, radius);
 }

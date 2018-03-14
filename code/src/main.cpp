@@ -36,6 +36,7 @@
 #include "RenderSystem.hpp"
 #include "AnimationSystem.hpp"
 #include "MouseProcessing.hpp"
+#include "AntennaGenerator.hpp"
 #include "PostProcessor.h"
 
 using namespace std;
@@ -45,6 +46,7 @@ using namespace std;
 static double mouseX = 0;
 static double mouseY = 0;
 static Pose* mousePose;
+static SolidMesh* antennaMesh;
 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
         // Forward Declarations
@@ -104,7 +106,20 @@ int main(int argc, char** argv){
     // try and keep all that linked together inside of the single RenderSystem for simplicity and
     // so that not buffers or other data has to be shared between calls here in main(). 
 
-    mousePose->loc = MouseProcessing::getWoldSpace(mouseX, mouseY, appstate.window, camera);
+    vec3 mousePos = MouseProcessing::getWoldSpace(mouseX, mouseY, appstate.window, camera);
+    mousePose->loc = mousePos;
+
+    AntennaGenerator *antennaGen = new AntennaGenerator();
+    antennaGen->generateAntenna(vec3(-0.5f, 3.0f, 2.0f), mousePos);
+
+    Geometry* geo = new Geometry();
+    geo->posBuf = make_shared<vector<float>>(antennaGen->vertexBuffer);
+    geo->eleBuf = make_shared<vector<unsigned int>>(antennaGen->indexBuffer);
+    geo->norBuf = make_shared<vector<float>>();
+    geo->texBuf = make_shared<vector<float>>();
+    geo->init();
+
+    antennaMesh->geometries = {*geo};
 
     RenderSystem::render(appstate, gstate, dt);
 
@@ -324,10 +339,24 @@ static void initScene(ApplicationState &appstate, GameState &gstate, Camera* cam
     cube3->attach(mesh);
     cube3->attach(pose);
   }
+
+  Entity* antenna;
+  {
+    antenna = new Entity();
+
+    Material mat("" STRIFY(ASSET_DIR) "/simple-phong.mat");
+
+    vector<Geometry> antennaGeo = vector<Geometry>();
+    antennaMesh = new SolidMesh(antennaGeo);
+    antennaMesh->setMaterial(mat);
+    antenna->attach(antennaMesh);
+  }
+
   gstate.activeScene->addEntity(groundplane);
   gstate.activeScene->addEntity(cube);
   gstate.activeScene->addEntity(cube2);
   gstate.activeScene->addEntity(cube3);
+  gstate.activeScene->addEntity(antenna);
 
   gstate.activeScene->addEntity(sun);
   gstate.activeScene->addEntity(pointlight);
