@@ -35,12 +35,16 @@
 
 #include "RenderSystem.hpp"
 #include "AnimationSystem.hpp"
+#include "MouseProcessing.hpp"
 #include "PostProcessor.h"
 
 using namespace std;
 
 // #define FORCEWINDOW
 
+static double mouseX = 0;
+static double mouseY = 0;
+static Pose* mousePose;
 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
         // Forward Declarations
@@ -54,14 +58,11 @@ static void initScene(ApplicationState &appstate, GameState &gstate, Camera* cam
 
 static GLFWmonitor* autoDetectScreen(UINT* width, UINT* height);
 static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
+static void cursor_callback(GLFWwindow *window, double posX, double posY);
 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
         // END Forward Declarations
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-
-
-
-
 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
         // Main()
@@ -102,6 +103,8 @@ int main(int argc, char** argv){
     // parts of the drawing and operate on different buffers and geometries. However I'd like to
     // try and keep all that linked together inside of the single RenderSystem for simplicity and
     // so that not buffers or other data has to be shared between calls here in main(). 
+
+    mousePose->loc = MouseProcessing::getWoldSpace(mouseX, mouseY, appstate.window, camera);
 
     RenderSystem::render(appstate, gstate, dt);
 
@@ -198,10 +201,13 @@ static void initGLFW(ApplicationState &appstate){
   }
   glfwMakeContextCurrent(appstate.window);
 
+  glfwGetCursorPos(appstate.window, &mouseX, &mouseY);
+
   glfwSwapInterval(1);
   // glfwSetInputMode(appstate.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
   glfwSetFramebufferSizeCallback(appstate.window, RenderSystem::onResize);
   glfwSetKeyCallback(appstate.window, key_callback);
+  glfwSetCursorPosCallback(appstate.window, cursor_callback);
 }
 
 static void initShaders(ApplicationState &appstate){
@@ -273,11 +279,11 @@ static void initScene(ApplicationState &appstate, GameState &gstate, Camera* cam
     SolidMesh* mesh = new SolidMesh(cubegeo);
     mesh->setMaterial(mat);
 
-    Pose* pose = new Pose(glm::vec3(0, 3, 10));
-    pose->scale = glm::vec3(0.1, 0.1, 0.1);
-    pose->orient = glm::angleAxis(glm::radians(45.0f), glm::vec3(0, 1, 0));
+    mousePose = new Pose(glm::vec3(0, 3, 10));
+    mousePose->scale = glm::vec3(0.1, 0.1, 0.1);
+    mousePose->orient = glm::angleAxis(glm::radians(45.0f), glm::vec3(0, 1, 0));
     cube->attach(mesh);
-    cube->attach(pose);
+    cube->attach(mousePose);
   }
 
 
@@ -376,6 +382,12 @@ static GLFWmonitor* autoDetectScreen(UINT* width, UINT* height){
     // Either 16:9 or 16:10, should be fine in fullscreen. 
     return(primary);
   }
+}
+
+static void cursor_callback(GLFWwindow *window, double posX, double posY)
+{
+  mouseX = posX;
+  mouseY = posY;
 }
 
 // This should be considered temporary untill a proper menu is established. In playable
