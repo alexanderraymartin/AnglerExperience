@@ -1,9 +1,11 @@
 #include "Spawner.h"
 
+using namespace glm;
+using namespace std;
 
-void Spawner::update(float dt) {
+void Spawner::update(GameState* state, float dt) {
 	if (shouldSpawn(dt)) {
-		spawn();
+		spawn(state);
 	}
 }
 
@@ -14,4 +16,8 @@ bool Spawner::shouldSpawn(float dt) {
 		return true;
 	}
 	return false;
+}
+
+void Spawnable::spawn(vec3 location, GameState* state) {
+	state->activeScene->addEntity((*newFish)(location));
 }

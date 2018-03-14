@@ -3,16 +3,16 @@
 #define SPAWNER_H_
 
 #include "SimpleComponents.hpp"
-#include "../Entity.hpp"
+#include "../GameState.hpp"
 
 class Spawner : public Component {
 public:
 
-	void update(float dt);
+	void update(GameState* state, float dt);
 
 	bool shouldSpawn(float dt);
 
-	void spawn() { offspring.spawn(location); }
+	void spawn(GameState* state) { offspring.spawn(location, state); }
 
 protected:
 	Spawnable offspring;
@@ -26,14 +26,16 @@ protected:
 class Spawnable : public Component {
 public:
 	//Overwrite me to make a new entity at location when called
-	virtual void spawn(glm::vec3 location);
+	void spawn(glm::vec3 location, GameState* state);
 	//copy entity
 	//get pose
 	//set pose to location
 	//set velocity to head into the scene
 
+	void setFishSpawnFunc(Entity* (*fishFunc)(glm::vec3 location)) { newFish = fishFunc; }
+
 protected:
-	Entity* entity;
+	Entity* (*newFish)(glm::vec3 location);
 };
 
 
