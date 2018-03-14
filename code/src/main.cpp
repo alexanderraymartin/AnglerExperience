@@ -52,7 +52,6 @@ static SolidMesh* antennaMesh;
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 static void initGL();
-static void initLibs(TopLevelResources &resources);
 static void initGLFW(ApplicationState &appstate);
 static void initShaders(ApplicationState &appstate);
 static void initScene(ApplicationState &appstate, GameState &gstate, Camera* camera);
@@ -75,7 +74,6 @@ int main(int argc, char** argv){
 
   srand(time(NULL));
   initGLFW(appstate);
-  initLibs(appstate.resources); // Can be split up in needed
   initGL();
   initShaders(appstate);
   DynamicCamera* camera = new DynamicCamera();
@@ -159,13 +157,6 @@ static void initGL(){
   glClearColor(0.0, 0.0, 0.0, 1.0);
 }
 
-static void initLibs(TopLevelResources &resources){
-  // SFML
-  // IMGUI
-  // ASSIMP
-  // ...?
-}
-
 // This is verbose and ugly. Maybe we should move it.
 static void initGLFW(ApplicationState &appstate){
   // Lambda functions for simple callbacks
@@ -217,7 +208,7 @@ static void initGLFW(ApplicationState &appstate){
 }
 
 static void initShaders(ApplicationState &appstate){
-  appstate.resources.shaderlib.init();
+  appstate.shaderlib.init();
 
   ifstream shaderfile = ifstream("" STRIFY(SHADER_DIR) "/shaders.json");
   if(!shaderfile.is_open()){
@@ -227,7 +218,7 @@ static void initShaders(ApplicationState &appstate){
   json shaderjson;
   shaderfile >> shaderjson;
   for(json::iterator it = shaderjson["pairs"].begin(); it != shaderjson["pairs"].end(); it++){
-    appstate.resources.shaderlib.add(it.key(), new Program(it.value()));
+    appstate.shaderlib.add(it.key(), new Program(it.value()));
     cout << "Loaded shader: " << it.key() << endl;
   }
 }
@@ -273,6 +264,29 @@ static void initScene(ApplicationState &appstate, GameState &gstate, Camera* cam
     groundplane->attach(pose);
   }
 
+  Entity* minnow;
+  {
+    minnow = new Entity();
+
+    Material mat("" STRIFY(ASSET_DIR) "/simple-phong.mat");
+
+    vector<SolidMesh*> meshes;
+    for (int i = 0; i < 19; i++) {
+      vector<Geometry> minnowgeo;
+      string num = i < 9 ? string("0") + to_string(i+1) : to_string(i+1);
+      Geometry::loadFullObj((string("" STRIFY(ASSET_DIR) "/minnow2/Minnow_0000")
+        + num + string(".obj")).c_str(), minnowgeo);
+      SolidMesh* mesh = new SolidMesh(minnowgeo);
+      mesh->setMaterial(mat);
+      meshes.push_back(mesh);
+    }
+
+    Pose* pose = new Pose(glm::vec3(0, 3, 5));
+    pose->scale = glm::vec3(1, 1, 1);
+    pose->orient = glm::angleAxis(glm::radians(90.0f), glm::vec3(0, 1, 0));
+    minnow->attach(new AnimatableMesh(new Animation(meshes, 0.066)));
+    minnow->attach(pose);
+  }
 
   Entity* cube2;
   {
@@ -324,6 +338,7 @@ static void initScene(ApplicationState &appstate, GameState &gstate, Camera* cam
     antenna->attach(antennaMesh);
   }
 
+  gstate.activeScene->addEntity(minnow);
   gstate.activeScene->addEntity(groundplane);
   gstate.activeScene->addEntity(cube2);
   gstate.activeScene->addEntity(cube3);

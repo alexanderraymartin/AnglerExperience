@@ -59,6 +59,7 @@ namespace RenderSystem{
   static int currCaustic = 0;
   static string causticDir;
   static std::shared_ptr<Texture> caustics[CAUSTIC_COUNT];
+  static std::queue<const Entity*> renderq;
 
   static GLuint shadowFramebuffer;
   static GLuint shadowTexture;
@@ -77,7 +78,7 @@ namespace RenderSystem{
 
   void drawEntities(Scene* scene, Program* shader);
 
-  void drawEntity(const Entity* entity, Program* shader);
+  void drawEntity(const Entity* entity, Program* shader, bool buildq);
 
   void onResize(GLFWwindow *window, int width, int height);
 
