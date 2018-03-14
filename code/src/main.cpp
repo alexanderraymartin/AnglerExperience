@@ -51,7 +51,6 @@ static Pose* mousePose;
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 static void initGL();
-static void initLibs(TopLevelResources &resources);
 static void initGLFW(ApplicationState &appstate);
 static void initShaders(ApplicationState &appstate);
 static void initScene(ApplicationState &appstate, GameState &gstate, Camera* camera);
@@ -74,7 +73,6 @@ int main(int argc, char** argv){
 
   srand(time(NULL));
   initGLFW(appstate);
-  initLibs(appstate.resources); // Can be split up in needed
   initGL();
   initShaders(appstate);
   DynamicCamera* camera = new DynamicCamera();
@@ -153,13 +151,6 @@ static void initGL(){
   glClearColor(0.0, 0.0, 0.0, 1.0);
 }
 
-static void initLibs(TopLevelResources &resources){
-  // SFML
-  // IMGUI
-  // ASSIMP
-  // ...?
-}
-
 // This is verbose and ugly. Maybe we should move it.
 static void initGLFW(ApplicationState &appstate){
   // Lambda functions for simple callbacks
@@ -211,7 +202,7 @@ static void initGLFW(ApplicationState &appstate){
 }
 
 static void initShaders(ApplicationState &appstate){
-  appstate.resources.shaderlib.init();
+  appstate.shaderlib.init();
 
   ifstream shaderfile = ifstream("" STRIFY(SHADER_DIR) "/shaders.json");
   if(!shaderfile.is_open()){
@@ -221,7 +212,7 @@ static void initShaders(ApplicationState &appstate){
   json shaderjson;
   shaderfile >> shaderjson;
   for(json::iterator it = shaderjson["pairs"].begin(); it != shaderjson["pairs"].end(); it++){
-    appstate.resources.shaderlib.add(it.key(), new Program(it.value()));
+    appstate.shaderlib.add(it.key(), new Program(it.value()));
     cout << "Loaded shader: " << it.key() << endl;
   }
 }

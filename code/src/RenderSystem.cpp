@@ -35,7 +35,7 @@ void RenderSystem::init(ApplicationState &appstate){
   glfwGetFramebufferSize(appstate.window, &w_width, &w_height);
   glViewport(0, 0, w_width, w_height);
 
-  shaderlib = &appstate.resources.shaderlib;
+  shaderlib = &appstate.shaderlib;
 
   deferred_export = shaderlib->getPtr("deferred-export");
   deferred_uber = shaderlib->getPtr("deferred-uber");

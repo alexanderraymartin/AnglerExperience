@@ -29,12 +29,6 @@ enum class ApplicationType{
   // Add more as you see fit
 };
 
-struct TopLevelResources{
-    ShaderLibrary shaderlib;
-    // FontLibrary fonts;
-    // Library/SDK instances 
-};
-
 // We can continue to fill this out as we move forward. It should only hold information key to the
 // very core c++ application, and not anything directly tied to gameplay or assets
 struct ApplicationState{
@@ -48,8 +42,7 @@ struct ApplicationState{
   // Global stats collection such as number of total frames rendered
   unsigned long framesCompleted = 0;
 
-  TopLevelResources resources;
-  
+  ShaderLibrary shaderlib;  
 };
 
 
