@@ -1,6 +1,6 @@
 #include "AntennaGenerator.hpp"
 
-AntennaGenerator::AntennaGenerator() : rings(15), ringVertices(30), radius(0.05f) {
+AntennaGenerator::AntennaGenerator() : rings(15), ringVertices(30), radius(0.01f) {
 
   vertexBuffer.resize((ringVertices * rings + 2) * 3);
   normalBuffer.resize((ringVertices * rings + 2) * 3);
@@ -24,9 +24,17 @@ void AntennaGenerator::generateVertices(vector<vec3> points, int rings, int ring
   vertexBuffer[1] = points[0].y;
   vertexBuffer[2] =  points[0].z;
 
+  normalBuffer[0] = normalize(points[0].x - points[1].x);
+  normalBuffer[1] = normalize(points[0].y - points[1].y);
+  normalBuffer[2] = normalize(points[0].z - points[1].z);
+
   vertexBuffer[ringVertices * rings * 3 + 3] = points[rings - 1].x;
   vertexBuffer[ringVertices * rings * 3 + 4] = points[rings - 1].y;
   vertexBuffer[ringVertices * rings * 3 + 5] = points[rings - 1].z;
+
+  normalBuffer[ringVertices * rings * 3 + 3] = normalize(points[rings - 1].x - points[rings - 2].x);
+  normalBuffer[ringVertices * rings * 3 + 4] = normalize(points[rings - 1].y - points[rings - 2].y);
+  normalBuffer[ringVertices * rings * 3 + 5] = normalize(points[rings - 1].z - points[rings - 2].z);
 
   //Generate cylinder vertices
   for (int j = 0; j < rings; j++) {
@@ -40,7 +48,7 @@ void AntennaGenerator::generateVertices(vector<vec3> points, int rings, int ring
       axis = points[j]-points[j-1];
     }
 
-    vec3 a = normalize(cross(axis, vec3(1.0,0.0,1.0)));
+    vec3 a = normalize(cross(axis, vec3(0.0,1.0,0.0)));
     vec3 b = normalize(cross(axis, a));
 
     for (int i = 0; i < ringVertices; i++) {
@@ -50,6 +58,10 @@ void AntennaGenerator::generateVertices(vector<vec3> points, int rings, int ring
       vertexBuffer[baseIdx] = radius * (cos(angle) * a.x + sin(angle) * b.x) + points[j].x;
       vertexBuffer[baseIdx + 1] = radius * (cos(angle) * a.y + sin(angle) * b.y) + points[j].y;
       vertexBuffer[baseIdx + 2] = radius * (cos(angle) * a.z + sin(angle) * b.z) + points[j].z;
+
+      normalBuffer[baseIdx] = normalize(vertexBuffer[baseIdx] - points[j].x);
+      normalBuffer[baseIdx + 1] = normalize(vertexBuffer[baseIdx + 1] - points[j].y);
+      normalBuffer[baseIdx + 2] = normalize(vertexBuffer[baseIdx + 2] - points[j].z);
     }
   }
 }

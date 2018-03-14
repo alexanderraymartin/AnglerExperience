@@ -45,7 +45,6 @@ using namespace std;
 
 static double mouseX = 0;
 static double mouseY = 0;
-static Pose* mousePose;
 static SolidMesh* antennaMesh;
 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -107,15 +106,13 @@ int main(int argc, char** argv){
     // so that not buffers or other data has to be shared between calls here in main(). 
 
     vec3 mousePos = MouseProcessing::getWoldSpace(mouseX, mouseY, appstate.window, camera);
-    mousePose->loc = mousePos;
-
     AntennaGenerator *antennaGen = new AntennaGenerator();
     antennaGen->generateAntenna(vec3(-0.5f, 3.0f, 2.0f), mousePos);
 
     Geometry* geo = new Geometry();
     geo->posBuf = make_shared<vector<float>>(antennaGen->vertexBuffer);
+    geo->norBuf = make_shared<vector<float>>(antennaGen->normalBuffer);
     geo->eleBuf = make_shared<vector<unsigned int>>(antennaGen->indexBuffer);
-    geo->norBuf = make_shared<vector<float>>();
     geo->texBuf = make_shared<vector<float>>();
     geo->init();
 
@@ -282,25 +279,6 @@ static void initScene(ApplicationState &appstate, GameState &gstate, Camera* cam
     groundplane->attach(pose);
   }
 
-  Entity* cube;
-  {
-    cube = new Entity();
-
-    Material mat("" STRIFY(ASSET_DIR) "/simple-phong.mat");
-
-    vector<Geometry> cubegeo;
-    Geometry::loadFullObj( "" STRIFY(ASSET_DIR) "/cube.obj", cubegeo);
-
-    SolidMesh* mesh = new SolidMesh(cubegeo);
-    mesh->setMaterial(mat);
-
-    mousePose = new Pose(glm::vec3(0, 3, 10));
-    mousePose->scale = glm::vec3(0.1, 0.1, 0.1);
-    mousePose->orient = glm::angleAxis(glm::radians(45.0f), glm::vec3(0, 1, 0));
-    cube->attach(mesh);
-    cube->attach(mousePose);
-  }
-
 
   Entity* cube2;
   {
@@ -353,7 +331,6 @@ static void initScene(ApplicationState &appstate, GameState &gstate, Camera* cam
   }
 
   gstate.activeScene->addEntity(groundplane);
-  gstate.activeScene->addEntity(cube);
   gstate.activeScene->addEntity(cube2);
   gstate.activeScene->addEntity(cube3);
   gstate.activeScene->addEntity(antenna);
