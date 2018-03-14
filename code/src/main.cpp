@@ -32,13 +32,14 @@
 #include "LightingComponents.hpp"
 #include "Material.hpp"
 #include "Camera.h"
+#include "Spawner.h"
 
 #include "RenderSystem.hpp"
 #include "AnimationSystem.hpp"
 
 using namespace std;
 
-// #define FORCEWINDOW
+#define FORCEWINDOW
 
 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -57,9 +58,6 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
         // END Forward Declarations
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-
-
-
 
 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -89,6 +87,7 @@ int main(int argc, char** argv){
       // TODO: PlayerSystem::update(appstate, gstate, elapsedTime);
       // TODO: CameraSystem::update(appstate, gstate, elapsedTime);
 		camera->update(appstate.window, dt);
+		SpawnSystem::update(appstate, gstate, dt);
       // TODO: SwarmSystem::update(appstate, gstate, elapsedTime);
       // TODO: PhysicsSystem::update(appstate, gstate, elapsedTime);
       // TODO: ParticleSystem::update(appstate, gstate, elapsedTime); // Particle System System*
@@ -177,7 +176,7 @@ static void initGLFW(ApplicationState &appstate){
   UINT w_width = 854;
   UINT w_height = 480;
 
-  GLFWmonitor* monitor = autoDetectScreen(&w_width, &w_height);
+  GLFWmonitor* monitor;// = autoDetectScreen(&w_width, &w_height);
 
 #ifdef FORCEWINDOW
   monitor = NULL;
@@ -217,6 +216,29 @@ static void initShaders(ApplicationState &appstate){
     appstate.resources.shaderlib.add(it.key(), new Program(it.value()));
     cout << "Loaded shader: " << it.key() << endl;
   }
+}
+
+static Entity* createCube(vec3 location) {
+
+	Entity* cube;
+	
+	cube = new Entity();
+
+	Material mat("" STRIFY(ASSET_DIR) "/simple-phong.mat");
+
+	vector<Geometry> cubegeo;
+	Geometry::loadFullObj("" STRIFY(ASSET_DIR) "/cube.obj", cubegeo);
+
+	SolidMesh* mesh = new SolidMesh(cubegeo);
+	mesh->setMaterial(mat);
+	location.x += (rand() % 100) / 10.0f - 5;
+	Pose* pose = new Pose(location);
+	pose->scale = glm::vec3(0.1, 0.1, 0.1);
+	pose->orient = glm::angleAxis(glm::radians(45.0f), glm::vec3(0, 1, 0));
+	cube->attach(mesh);
+	cube->attach(pose);
+	
+	return cube;
 }
 
 static void initScene(ApplicationState &appstate, GameState &gstate, Camera* camera){
@@ -260,27 +282,14 @@ static void initScene(ApplicationState &appstate, GameState &gstate, Camera* cam
     groundplane->attach(pose);
   }
 
-  Entity* cube;
+  vec3 cubeLoc = vec3(0, 3, 10);
+  Entity* mamaCube = createCube(cubeLoc);
   {
-    cube = new Entity();
-
-    Material mat("" STRIFY(ASSET_DIR) "/simple-phong.mat");
-
-    vector<Geometry> cubegeo;
-    Geometry::loadFullObj( "" STRIFY(ASSET_DIR) "/cube.obj", cubegeo);
-
-    SolidMesh* mesh = new SolidMesh(cubegeo);
-    mesh->setMaterial(mat);
-
-    Pose* pose = new Pose(glm::vec3(0, 3, 10));
-    pose->scale = glm::vec3(0.1, 0.1, 0.1);
-    pose->orient = glm::angleAxis(glm::radians(45.0f), glm::vec3(0, 1, 0));
-    cube->attach(mesh);
-    cube->attach(pose);
+	  mamaCube->attach(new Spawner(cubeLoc, &createCube));
   }
 
   gstate.activeScene->addEntity(groundplane);
-  gstate.activeScene->addEntity(cube);
+  gstate.activeScene->addEntity(mamaCube);
 
   gstate.activeScene->addEntity(sun);
   gstate.activeScene->addEntity(pointlight);

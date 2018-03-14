@@ -117,6 +117,6 @@ include_directories("${PROJECT_SOURCE_DIR}/libs/TinyObj")
 
 #Custom build command to put all shaders into a single JSON file.
 set(SHADERPACKAGE "shaders/shaders.json") 
-add_custom_command(OUTPUT ${SHADERPACKAGE} COMMAND py jsify_shaders.py shaders/ -o ${SHADERPACKAGE} WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} DEPENDS ${GLSL})
+add_custom_command(OUTPUT ${SHADERPACKAGE} COMMAND python jsify_shaders.py shaders/ -o ${SHADERPACKAGE} WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} DEPENDS ${GLSL})
 add_custom_target(Shader_Pack DEPENDS ${SHADERPACKAGE})
 add_dependencies(${CMAKE_PROJECT_NAME} Shader_Pack)
