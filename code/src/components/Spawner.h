@@ -5,23 +5,6 @@
 #include "SimpleComponents.hpp"
 #include "../GameState.hpp"
 
-class Spawner : public Component {
-public:
-
-	void update(GameState* state, float dt);
-
-	bool shouldSpawn(float dt);
-
-	void spawn(GameState* state) { offspring.spawn(location, state); }
-
-protected:
-	Spawnable offspring;
-	glm::vec3 location;
-	float cumTime = 0;
-	float timePerSpawn = 1.0f;
-};
-
-
 
 class Spawnable : public Component {
 public:
@@ -37,6 +20,26 @@ public:
 protected:
 	Entity* (*newFish)(glm::vec3 location);
 };
+
+
+class Spawner : public Component {
+public:
+	Spawnable offspring;
+
+	void update(GameState* state, float dt);
+
+	bool shouldSpawn(float dt);
+
+	void spawn(GameState* state) { offspring.spawn(location, state); }
+
+protected:
+	glm::vec3 location;
+	float cumTime = 0;
+	float timePerSpawn = 1.0f;
+};
+
+
+
 
 
 
