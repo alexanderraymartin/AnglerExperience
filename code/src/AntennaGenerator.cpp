@@ -121,7 +121,16 @@ vector<vec3> AntennaGenerator::generateBezierLine(vec3 origin, vec3 dest, int po
   return linePoints;
 }
 
-void AntennaGenerator::generateAntenna(vec3 origin, vec3 dest) {
+Geometry* AntennaGenerator::generateAntenna(vec3 origin, vec3 dest) {
   vector<vec3> points = generateBezierLine(origin, dest, rings);
   generateVertices(points, rings, ringVertices, radius);
+
+  Geometry* geo = new Geometry();
+  geo->posBuf = make_shared<vector<float>>(vertexBuffer);
+  geo->norBuf = make_shared<vector<float>>(normalBuffer);
+  geo->eleBuf = make_shared<vector<unsigned int>>(indexBuffer);
+  geo->texBuf = make_shared<vector<float>>();
+  geo->init();
+
+  return geo;
 }

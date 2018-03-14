@@ -8,6 +8,8 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 
+#include "components/Geometry.hpp"
+
 using namespace glm;
 using namespace std;
 
@@ -16,7 +18,7 @@ public:
   AntennaGenerator();
   AntennaGenerator(unsigned int rings, unsigned int ringVertices, float radius);
 
-  void generateAntenna(vec3 origin, vec3 dest);
+  Geometry* generateAntenna(vec3 origin, vec3 dest);
 
   vector<float> vertexBuffer;
   vector<float> normalBuffer;

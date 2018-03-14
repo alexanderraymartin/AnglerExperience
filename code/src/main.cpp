@@ -83,6 +83,8 @@ int main(int argc, char** argv){
 
   RenderSystem::init(appstate);
 
+  AntennaGenerator *antennaGen = new AntennaGenerator();
+
   gstate.gameTime.reset();
   while(!glfwWindowShouldClose(appstate.window)){
 
@@ -106,17 +108,9 @@ int main(int argc, char** argv){
     // so that not buffers or other data has to be shared between calls here in main(). 
 
     vec3 mousePos = MouseProcessing::getWoldSpace(mouseX, mouseY, appstate.window, camera);
-    AntennaGenerator *antennaGen = new AntennaGenerator();
-    antennaGen->generateAntenna(vec3(-0.5f, 3.0f, 2.0f), mousePos);
 
-    Geometry* geo = new Geometry();
-    geo->posBuf = make_shared<vector<float>>(antennaGen->vertexBuffer);
-    geo->norBuf = make_shared<vector<float>>(antennaGen->normalBuffer);
-    geo->eleBuf = make_shared<vector<unsigned int>>(antennaGen->indexBuffer);
-    geo->texBuf = make_shared<vector<float>>();
-    geo->init();
-
-    antennaMesh->geometries = {*geo};
+    Geometry* geo = antennaGen->generateAntenna(vec3(-0.5f, 3.0f, 2.0f), mousePos);
+    //antennaMesh->geometries = {*geo};
 
     RenderSystem::render(appstate, gstate, dt);
 
