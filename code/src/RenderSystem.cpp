@@ -88,7 +88,7 @@ void RenderSystem::render(ApplicationState &appstate, GameState &gstate, double 
   drawEntities(gstate.activeScene, deferred_shadow);
 
   updateShadowMap();
-  updateCaustic();
+  updateCaustic(elapsedTime, 24.0);
   applyShading(gstate.activeScene, *shaderlib);
 
   PostProcessor::doPostProcessing(render_out_color, deferred_buffers.depthBuffer);
@@ -449,11 +449,13 @@ void RenderSystem::updateDepthUniforms() {
   deferred_shadow->unbind();
 }
 
-void RenderSystem::updateCaustic() {
+void RenderSystem::updateCaustic(double elapsedTime, double speedMod) {
   deferred_uber->bind();
 
-  caustics[currCaustic]->bind(deferred_uber->getUniform("caustic"));
-  currCaustic = ++currCaustic >= CAUSTIC_COUNT ? 0 : currCaustic;
+  caustics[(int)currCaustic]->bind(deferred_uber->getUniform("caustic"));
+
+  currCaustic += (elapsedTime* speedMod);
+  currCaustic = currCaustic >= CAUSTIC_COUNT ? 0 : currCaustic;
 
   deferred_uber->unbind();
 }
