@@ -28,6 +28,7 @@ private:
   unsigned int rings;
   unsigned int ringVertices;
   float radius;
+  Geometry* geo;
 
   void generateVertices(vector<vec3> points, int rings, int ringVertices, float radius);
   void initFaces(int rings, int ringVertices);

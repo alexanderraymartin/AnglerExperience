@@ -7,6 +7,13 @@ AntennaGenerator::AntennaGenerator() : rings(15), ringVertices(30), radius(0.01f
   indexBuffer.resize(ringVertices * rings * 6);
 
   initFaces(rings, ringVertices);
+
+  geo = new Geometry();
+  geo->posBuf = make_shared<vector<float>>(vertexBuffer);
+  geo->norBuf = make_shared<vector<float>>(normalBuffer);
+  geo->eleBuf = make_shared<vector<unsigned int>>(indexBuffer);
+  geo->texBuf = make_shared<vector<float>>();
+  geo->initDynamic();
 }
 
 AntennaGenerator::AntennaGenerator(unsigned int _rings, unsigned int _ringVertices, float _radus) : rings(_rings), ringVertices(_ringVertices), radius(_radus) {
@@ -16,6 +23,13 @@ AntennaGenerator::AntennaGenerator(unsigned int _rings, unsigned int _ringVertic
   indexBuffer.resize(ringVertices * rings * 6);
 
   initFaces(rings, ringVertices);
+
+  geo = new Geometry();
+  geo->posBuf = make_shared<vector<float>>(vertexBuffer);
+  geo->norBuf = make_shared<vector<float>>(normalBuffer);
+  geo->eleBuf = make_shared<vector<unsigned int>>(indexBuffer);
+  geo->texBuf = make_shared<vector<float>>();
+  geo->initDynamic();
 }
 
 void AntennaGenerator::generateVertices(vector<vec3> points, int rings, int ringVertices, float radius) {
@@ -125,12 +139,11 @@ Geometry* AntennaGenerator::generateAntenna(vec3 origin, vec3 dest) {
   vector<vec3> points = generateBezierLine(origin, dest, rings);
   generateVertices(points, rings, ringVertices, radius);
 
-  Geometry* geo = new Geometry();
   geo->posBuf = make_shared<vector<float>>(vertexBuffer);
   geo->norBuf = make_shared<vector<float>>(normalBuffer);
   geo->eleBuf = make_shared<vector<unsigned int>>(indexBuffer);
   geo->texBuf = make_shared<vector<float>>();
-  geo->init();
+  geo->update();
 
   return geo;
 }

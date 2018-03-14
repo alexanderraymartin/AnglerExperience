@@ -23,6 +23,8 @@ public:
 
   void createGeometry(tinyobj::shape_t &shape);
   void init();
+  void initDynamic();
+  void update();
   void measure();
   void normalize();
   void adjust(glm::vec3 offset, float scale);

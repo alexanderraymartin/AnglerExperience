@@ -110,7 +110,7 @@ int main(int argc, char** argv){
     vec3 mousePos = MouseProcessing::getWoldSpace(mouseX, mouseY, appstate.window, camera);
 
     Geometry* geo = antennaGen->generateAntenna(vec3(-0.5f, 3.0f, 2.0f), mousePos);
-    //antennaMesh->geometries = {*geo};
+    antennaMesh->geometries = {*geo};
 
     RenderSystem::render(appstate, gstate, dt);
 
