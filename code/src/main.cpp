@@ -258,6 +258,30 @@ static void initScene(ApplicationState &appstate, GameState &gstate, Camera* cam
     groundplane->attach(pose);
   }
 
+  Entity* minnow;
+  {
+    minnow = new Entity();
+
+    Material mat("" STRIFY(ASSET_DIR) "/simple-phong.mat");
+
+    vector<SolidMesh*> meshes;
+    for (int i = 0; i < 19; i++) {
+      vector<Geometry> minnowgeo;
+      string num = i < 9 ? string("0") + to_string(i+1) : to_string(i+1);
+      Geometry::loadFullObj((string("" STRIFY(ASSET_DIR) "/minnow2/Minnow_0000")
+        + num + string(".obj")).c_str(), minnowgeo);
+      SolidMesh* mesh = new SolidMesh(minnowgeo);
+      mesh->setMaterial(mat);
+      meshes.push_back(mesh);
+    }
+
+    Pose* pose = new Pose(glm::vec3(0, 3, 5));
+    pose->scale = glm::vec3(1, 1, 1);
+    pose->orient = glm::angleAxis(glm::radians(90.0f), glm::vec3(0, 1, 0));
+    minnow->attach(new AnimatableMesh(new Animation(meshes, 0.066)));
+    minnow->attach(pose);
+  }
+
   Entity* cube;
   {
     cube = new Entity();
@@ -276,7 +300,6 @@ static void initScene(ApplicationState &appstate, GameState &gstate, Camera* cam
     cube->attach(mesh);
     cube->attach(mousePose);
   }
-
 
   Entity* cube2;
   {
@@ -315,6 +338,9 @@ static void initScene(ApplicationState &appstate, GameState &gstate, Camera* cam
     cube3->attach(mesh);
     cube3->attach(pose);
   }
+
+  gstate.activeScene->addEntity(minnow);
+
   gstate.activeScene->addEntity(groundplane);
   gstate.activeScene->addEntity(cube);
   gstate.activeScene->addEntity(cube2);

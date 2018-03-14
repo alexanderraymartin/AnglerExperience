@@ -51,4 +51,86 @@ class LinearRotationAnim : public AnimationComponent{
   vec3 euler;
 };
 
+// Helper class for AnimatableMesh
+class Animation {
+ public:
+  Animation();
+  Animation(vector<SolidMesh *> & copymeshes) :
+    meshes(copymeshes), timePerKeyFrame(0.1) {}
+  Animation(vector<SolidMesh *> &copymeshes, double timePerKeyFrame) :
+    meshes(copymeshes), timePerKeyFrame(timePerKeyFrame) {}
+
+  vector<SolidMesh *> meshes;
+  double timePerKeyFrame = 0.1;
+  int meshIndex = 0;
+  bool loop = true;
+  bool stop = false;
+
+  SolidMesh *getCurrentMesh() {
+    return meshes[meshIndex];
+  }
+  SolidMesh *getNextMesh() {
+    if (meshIndex + 1 >= meshes.size() && (!loop || stop)) {
+        meshIndex = 0;
+        stop = false;
+	return NULL;
+    }
+    return meshes[(meshIndex + 1) % meshes.size()];
+  }
+  void stopAnimation() {
+    stop = true;
+  }
+  void incrementKeyFrame() {
+    meshIndex = (meshIndex + 1) % meshes.size();
+  }
+};
+
+class AnimatableMesh : public AnimationComponent{
+ public:
+  AnimatableMesh();
+  AnimatableMesh(Animation *anim){animations.push_back(anim);}
+  ~AnimatableMesh(){};
+
+  void addAnimation(Animation *anim) {animations.push_back(anim);}
+
+  vector<Animation *> animations;
+  int animationIndex = 0;
+  int defaultAnimation = 0;
+  double dtLastKeyFrame = 0;
+  int nextAnimationIndex = 0;
+  int changeAnimationIndex = -1;
+
+  SolidMesh *getCurrentMesh() {
+    return animations[animationIndex]->getCurrentMesh();
+  }
+  SolidMesh *getNextMesh() {
+    SolidMesh *next = animations[nextAnimationIndex]->getNextMesh();
+    if (next == NULL) {
+      /* Not supposed to loop, return to default animation */
+      if (changeAnimationIndex == -1) {
+        nextAnimationIndex = defaultAnimation;
+        next = animations[nextAnimationIndex]->getNextMesh();
+      } else { /* Another animation was triggered */
+        nextAnimationIndex = changeAnimationIndex;
+        changeAnimationIndex = -1;
+        next = animations[nextAnimationIndex]->getNextMesh();
+      }
+    }
+    return next;
+  }
+  void updateKeyFrame() {
+    if (dtLastKeyFrame > timeForKeyFrame()) {
+      animations[animationIndex]->incrementKeyFrame();
+      dtLastKeyFrame = 0;
+    }
+  }
+  void triggerAnimation(int i) {
+    changeAnimationIndex = i;
+    animations[animationIndex]->stopAnimation();
+  }
+  double timeForKeyFrame() {
+    return animations[animationIndex]->timePerKeyFrame;
+  }
+};
+
 #endif
