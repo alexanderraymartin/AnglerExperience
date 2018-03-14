@@ -35,33 +35,33 @@
 
 #include "RenderSystem.hpp"
 #include "AnimationSystem.hpp"
+#include "MouseProcessing.hpp"
 #include "PostProcessor.h"
 
 using namespace std;
 
 // #define FORCEWINDOW
 
+static double mouseX = 0;
+static double mouseY = 0;
+static Pose* mousePose;
 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
         // Forward Declarations
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 static void initGL();
-static void initLibs(TopLevelResources &resources);
 static void initGLFW(ApplicationState &appstate);
 static void initShaders(ApplicationState &appstate);
 static void initScene(ApplicationState &appstate, GameState &gstate, Camera* camera);
 
 static GLFWmonitor* autoDetectScreen(UINT* width, UINT* height);
 static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
+static void cursor_callback(GLFWwindow *window, double posX, double posY);
 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
         // END Forward Declarations
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-
-
-
-
 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
         // Main()
@@ -73,7 +73,6 @@ int main(int argc, char** argv){
 
   srand(time(NULL));
   initGLFW(appstate);
-  initLibs(appstate.resources); // Can be split up in needed
   initGL();
   initShaders(appstate);
   DynamicCamera* camera = new DynamicCamera();
@@ -102,6 +101,8 @@ int main(int argc, char** argv){
     // parts of the drawing and operate on different buffers and geometries. However I'd like to
     // try and keep all that linked together inside of the single RenderSystem for simplicity and
     // so that not buffers or other data has to be shared between calls here in main(). 
+
+    mousePose->loc = MouseProcessing::getWoldSpace(mouseX, mouseY, appstate.window, camera);
 
     RenderSystem::render(appstate, gstate, dt);
 
@@ -150,13 +151,6 @@ static void initGL(){
   glClearColor(0.0, 0.0, 0.0, 1.0);
 }
 
-static void initLibs(TopLevelResources &resources){
-  // SFML
-  // IMGUI
-  // ASSIMP
-  // ...?
-}
-
 // This is verbose and ugly. Maybe we should move it.
 static void initGLFW(ApplicationState &appstate){
   // Lambda functions for simple callbacks
@@ -198,14 +192,17 @@ static void initGLFW(ApplicationState &appstate){
   }
   glfwMakeContextCurrent(appstate.window);
 
+  glfwGetCursorPos(appstate.window, &mouseX, &mouseY);
+
   glfwSwapInterval(1);
   // glfwSetInputMode(appstate.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
   glfwSetFramebufferSizeCallback(appstate.window, RenderSystem::onResize);
   glfwSetKeyCallback(appstate.window, key_callback);
+  glfwSetCursorPosCallback(appstate.window, cursor_callback);
 }
 
 static void initShaders(ApplicationState &appstate){
-  appstate.resources.shaderlib.init();
+  appstate.shaderlib.init();
 
   ifstream shaderfile = ifstream("" STRIFY(SHADER_DIR) "/shaders.json");
   if(!shaderfile.is_open()){
@@ -215,7 +212,7 @@ static void initShaders(ApplicationState &appstate){
   json shaderjson;
   shaderfile >> shaderjson;
   for(json::iterator it = shaderjson["pairs"].begin(); it != shaderjson["pairs"].end(); it++){
-    appstate.resources.shaderlib.add(it.key(), new Program(it.value()));
+    appstate.shaderlib.add(it.key(), new Program(it.value()));
     cout << "Loaded shader: " << it.key() << endl;
   }
 }
@@ -278,13 +275,30 @@ static void initScene(ApplicationState &appstate, GameState &gstate, Camera* cam
       meshes.push_back(mesh);
     }
 
-
     Pose* pose = new Pose(glm::vec3(0, 3, 5));
     pose->scale = glm::vec3(1, 1, 1);
     pose->orient = glm::angleAxis(glm::radians(90.0f), glm::vec3(0, 1, 0));
     minnow->attach(new AnimatableMesh(new Animation(meshes, 0.066)));
     minnow->attach(pose);
+  }
 
+  Entity* cube;
+  {
+    cube = new Entity();
+
+    Material mat("" STRIFY(ASSET_DIR) "/simple-phong.mat");
+
+    vector<Geometry> cubegeo;
+    Geometry::loadFullObj( "" STRIFY(ASSET_DIR) "/cube.obj", cubegeo);
+
+    SolidMesh* mesh = new SolidMesh(cubegeo);
+    mesh->setMaterial(mat);
+
+    mousePose = new Pose(glm::vec3(0, 3, 10));
+    mousePose->scale = glm::vec3(0.1, 0.1, 0.1);
+    mousePose->orient = glm::angleAxis(glm::radians(45.0f), glm::vec3(0, 1, 0));
+    cube->attach(mesh);
+    cube->attach(mousePose);
   }
 
   Entity* cube2;
@@ -328,6 +342,7 @@ static void initScene(ApplicationState &appstate, GameState &gstate, Camera* cam
   gstate.activeScene->addEntity(minnow);
 
   gstate.activeScene->addEntity(groundplane);
+  gstate.activeScene->addEntity(cube);
   gstate.activeScene->addEntity(cube2);
   gstate.activeScene->addEntity(cube3);
 
@@ -384,6 +399,12 @@ static GLFWmonitor* autoDetectScreen(UINT* width, UINT* height){
     // Either 16:9 or 16:10, should be fine in fullscreen. 
     return(primary);
   }
+}
+
+static void cursor_callback(GLFWwindow *window, double posX, double posY)
+{
+  mouseX = posX;
+  mouseY = posY;
 }
 
 // This should be considered temporary untill a proper menu is established. In playable
