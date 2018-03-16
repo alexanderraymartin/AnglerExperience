@@ -36,6 +36,7 @@
 #include "RenderSystem.hpp"
 #include "AnimationSystem.hpp"
 #include "MouseProcessing.hpp"
+#include "AntennaGenerator.hpp"
 #include "PostProcessor.h"
 
 using namespace std;
@@ -44,7 +45,7 @@ using namespace std;
 
 static double mouseX = 0;
 static double mouseY = 0;
-static Pose* mousePose;
+static SolidMesh* antennaMesh;
 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
         // Forward Declarations
@@ -80,6 +81,8 @@ int main(int argc, char** argv){
 
   RenderSystem::init(appstate);
 
+  AntennaGenerator *antennaGen = new AntennaGenerator();
+
   gstate.gameTime.reset();
   while(!glfwWindowShouldClose(appstate.window)){
 
@@ -102,7 +105,10 @@ int main(int argc, char** argv){
     // try and keep all that linked together inside of the single RenderSystem for simplicity and
     // so that not buffers or other data has to be shared between calls here in main(). 
 
-    mousePose->loc = MouseProcessing::getWoldSpace(mouseX, mouseY, appstate.window, camera);
+    vec3 mousePos = MouseProcessing::getWoldSpace(mouseX, mouseY, appstate.window, camera);
+
+    Geometry* geo = antennaGen->generateAntenna(vec3(-0.5f, 3.0f, 2.0f), mousePos);
+    antennaMesh->geometries = {*geo};
 
     RenderSystem::render(appstate, gstate, dt);
 
@@ -282,25 +288,6 @@ static void initScene(ApplicationState &appstate, GameState &gstate, Camera* cam
     minnow->attach(pose);
   }
 
-  Entity* cube;
-  {
-    cube = new Entity();
-
-    Material mat("" STRIFY(ASSET_DIR) "/simple-phong.mat");
-
-    vector<Geometry> cubegeo;
-    Geometry::loadFullObj( "" STRIFY(ASSET_DIR) "/cube.obj", cubegeo);
-
-    SolidMesh* mesh = new SolidMesh(cubegeo);
-    mesh->setMaterial(mat);
-
-    mousePose = new Pose(glm::vec3(0, 3, 10));
-    mousePose->scale = glm::vec3(0.1, 0.1, 0.1);
-    mousePose->orient = glm::angleAxis(glm::radians(45.0f), glm::vec3(0, 1, 0));
-    cube->attach(mesh);
-    cube->attach(mousePose);
-  }
-
   Entity* cube2;
   {
     cube2 = new Entity();
@@ -339,12 +326,23 @@ static void initScene(ApplicationState &appstate, GameState &gstate, Camera* cam
     cube3->attach(pose);
   }
 
-  gstate.activeScene->addEntity(minnow);
+  Entity* antenna;
+  {
+    antenna = new Entity();
 
+    Material mat("" STRIFY(ASSET_DIR) "/simple-phong.mat");
+
+    vector<Geometry> antennaGeo = vector<Geometry>();
+    antennaMesh = new SolidMesh(antennaGeo);
+    antennaMesh->setMaterial(mat);
+    antenna->attach(antennaMesh);
+  }
+
+  gstate.activeScene->addEntity(minnow);
   gstate.activeScene->addEntity(groundplane);
-  gstate.activeScene->addEntity(cube);
   gstate.activeScene->addEntity(cube2);
   gstate.activeScene->addEntity(cube3);
+  gstate.activeScene->addEntity(antenna);
 
   gstate.activeScene->addEntity(sun);
   gstate.activeScene->addEntity(pointlight);
