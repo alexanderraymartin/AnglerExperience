@@ -18,6 +18,9 @@ void DynamicCamera::update(GLFWwindow* window, float dt) {
 	if (glfwGetKey(window, GLFW_KEY_D)) {
 		userForce += vec3(-INPUT_FORCE, 0.0f, 0.0f);
 	}
+	if (glfwGetKey(window, GLFW_KEY_R)) {
+		shake(3.0f, 2.0f);
+	}
 	if (userForce != vec3(0.0)) {
 		userForce = normalize(userForce) * INPUT_FORCE;
 	}
@@ -54,6 +57,7 @@ void DynamicCamera::update(GLFWwindow* window, float dt) {
 		CAMERA_MASS -= 1.0f;
 		cout << "Camera mass: " << CAMERA_MASS << "\n";
 	}*/
+	updateShake(dt);
 	applyForces(dt);
 }
 
@@ -63,7 +67,7 @@ void DynamicCamera::applyForces(float dt) {
 	//k = spring constant, x = spring direction, b = spring friction, v = velocity
 	vec3 springForce = SPRING_CONSTANT * dirToCenter() - FRICTION_CONSTANT * velocity;
 	//sum forces
-	vec3 totalForce = springForce + userForce;
+	vec3 totalForce = springForce + userForce + shakeForce();
 	//F=MA or A = F/M
 	vec3 acceleration = totalForce / CAMERA_MASS;
 
@@ -89,6 +93,34 @@ glm::mat4 DynamicCamera::getView() {
 		defaultLocation + viewDirection, //What to look at
 		vec3(0, 1.0f, 0) //The direction of up
 	);
+}
+
+void DynamicCamera::shake(float amount, float duration) {
+	shakeDir = randomDir();
+	shakeAmount = shakeBaseForce = amount;
+	shakeDuration = duration;
+	shakeTimePassed = 0;
+}
+
+vec3 DynamicCamera::randomDir() {
+	uniform_real_distribution<float> distributionUniform(-1.0f, 1.0f);
+	glm::vec3 dir = vec3(distributionUniform(generator), distributionUniform(generator), 0.0f);
+	return normalize(dir);
+}
+
+void DynamicCamera::updateShake(float dt) {
+	shakeTimePassed += dt;
+	float newAmt = shakeBaseForce * (1 - shakeTimePassed / shakeDuration);
+	if (newAmt > 0) {
+		//This uses int casting and integer addition to change the direction of the camera shake SHAKE_CHANGE_RATE times per second
+		if (((int)(shakeTimePassed * SHAKE_CHANGE_RATE)) - (int)((shakeTimePassed - dt) * SHAKE_CHANGE_RATE) != 0) {
+			shakeDir = randomDir();
+		}
+		shakeAmount = newAmt;
+	}
+	else {
+		shakeAmount = 0;
+	}
 }
 
 glm::mat4 DynamicCamera::getPerspective(float aspect) {
