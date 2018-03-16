@@ -185,6 +185,63 @@ void Geometry::loadFullObj(const char* objname, vector<Geometry> &geometrysequen
   }
 }
 
+void Geometry::initDynamic()
+{
+  // Initialize the vertex array object
+  glGenVertexArrays(1, &vaoID);
+  glBindVertexArray(vaoID);
+
+  // Send the position array to the GPU
+  glGenBuffers(1, &posBufID);
+  glBindBuffer(GL_ARRAY_BUFFER, posBufID);
+  glBufferData(GL_ARRAY_BUFFER, posBuf->size()*sizeof(float), &(*posBuf)[0], GL_DYNAMIC_DRAW);
+
+  // Send the normal array to the GPU
+  if(norBuf->empty()) {
+    norBufID = 0;
+  } else {
+    glGenBuffers(1, &norBufID);
+    glBindBuffer(GL_ARRAY_BUFFER, norBufID);
+    glBufferData(GL_ARRAY_BUFFER, norBuf->size()*sizeof(float), &(*norBuf)[0], GL_DYNAMIC_DRAW);
+  }
+
+  // Send the texture array to the GPU
+  if(texBuf->empty()) {
+    texBufID = 0;
+  } else {
+    glGenBuffers(1, &texBufID);
+    glBindBuffer(GL_ARRAY_BUFFER, texBufID);
+    glBufferData(GL_ARRAY_BUFFER, texBuf->size()*sizeof(float), &(*texBuf)[0], GL_DYNAMIC_DRAW);
+  }
+
+  // Send the element array to the GPU
+  glGenBuffers(1, &eleBufID);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, eleBufID);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, eleBuf->size()*sizeof(unsigned int), &(*eleBuf)[0], GL_STATIC_DRAW);
+
+  // Unbind the arrays
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+  assert(glGetError() == GL_NO_ERROR);
+}
+
+void Geometry::update() {
+  glBindVertexArray(vaoID);
+  glBindBuffer(GL_ARRAY_BUFFER, posBufID);
+  glBufferSubData(GL_ARRAY_BUFFER, 0, posBuf->size()*sizeof(float), &(*posBuf)[0]);
+
+  if(!norBuf->empty()) {
+    glBindBuffer(GL_ARRAY_BUFFER, norBufID);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, norBuf->size()*sizeof(float), &(*norBuf)[0]);
+  }
+
+  if(!texBuf->empty()) {
+    glBindBuffer(GL_ARRAY_BUFFER, texBufID);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, texBuf->size()*sizeof(float), &(*texBuf)[0]);
+  }
+}
+
 
 /* void Geometry::draw(const shared_ptr<Program> shader) const
 {

@@ -45,6 +45,7 @@ class SolidMesh : public Component{
 class Camera : public Component{
  public:
   virtual ~Camera(){};
+  virtual glm::vec3 getLocation() = 0;
   virtual glm::vec3 getViewDir() = 0;
   virtual glm::mat4 getView() = 0;
   virtual glm::mat4 getPerspective(float aspect) = 0;

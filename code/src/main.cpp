@@ -36,18 +36,21 @@
 
 #include "RenderSystem.hpp"
 #include "AnimationSystem.hpp"
+#include "MouseProcessing.hpp"
+#include "AntennaGenerator.hpp"
+#include "PostProcessor.h"
 
 using namespace std;
 
 #define FORCEWINDOW
 
+static SolidMesh* antennaMesh;
 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
         // Forward Declarations
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 static void initGL();
-static void initLibs(TopLevelResources &resources);
 static void initGLFW(ApplicationState &appstate);
 static void initShaders(ApplicationState &appstate);
 static void initScene(ApplicationState &appstate, GameState &gstate, Camera* camera);
@@ -70,13 +73,15 @@ int main(int argc, char** argv){
 
   srand(time(NULL));
   initGLFW(appstate);
-  initLibs(appstate.resources); // Can be split up in needed
   initGL();
   initShaders(appstate);
   DynamicCamera* camera = new DynamicCamera();
   initScene(appstate, gstate, camera);
 
   RenderSystem::init(appstate);
+
+  double mouseX, mouseY;
+  AntennaGenerator *antennaGen = new AntennaGenerator();
 
   gstate.gameTime.reset();
   while(!glfwWindowShouldClose(appstate.window)){
@@ -100,6 +105,12 @@ int main(int argc, char** argv){
     // parts of the drawing and operate on different buffers and geometries. However I'd like to
     // try and keep all that linked together inside of the single RenderSystem for simplicity and
     // so that not buffers or other data has to be shared between calls here in main(). 
+
+    glfwGetCursorPos(appstate.window, &mouseX, &mouseY);
+    vec3 mousePos = MouseProcessing::getWoldSpace(mouseX, mouseY, appstate.window, camera);
+
+    Geometry* geo = antennaGen->generateAntenna(vec3(-0.5f, 3.0f, 2.0f), mousePos);
+    antennaMesh->geometries = {*geo};
 
     RenderSystem::render(appstate, gstate, dt);
 
@@ -146,13 +157,6 @@ static void initGL(){
   glEnable(GL_CULL_FACE);
   glFrontFace(GL_CCW);
   glClearColor(0.0, 0.0, 0.0, 1.0);
-}
-
-static void initLibs(TopLevelResources &resources){
-  // SFML
-  // IMGUI
-  // ASSIMP
-  // ...?
 }
 
 // This is verbose and ugly. Maybe we should move it.
@@ -203,7 +207,7 @@ static void initGLFW(ApplicationState &appstate){
 }
 
 static void initShaders(ApplicationState &appstate){
-  appstate.resources.shaderlib.init();
+  appstate.shaderlib.init();
 
   ifstream shaderfile = ifstream("" STRIFY(SHADER_DIR) "/shaders.json");
   if(!shaderfile.is_open()){
@@ -213,7 +217,7 @@ static void initShaders(ApplicationState &appstate){
   json shaderjson;
   shaderfile >> shaderjson;
   for(json::iterator it = shaderjson["pairs"].begin(); it != shaderjson["pairs"].end(); it++){
-    appstate.resources.shaderlib.add(it.key(), new Program(it.value()));
+    appstate.shaderlib.add(it.key(), new Program(it.value()));
     cout << "Loaded shader: " << it.key() << endl;
   }
 }
@@ -287,9 +291,86 @@ static void initScene(ApplicationState &appstate, GameState &gstate, Camera* cam
   {
 	  mamaCube->attach(new Spawner(cubeLoc, &createCube));
   }
+  Entity* minnow;
+  {
+    minnow = new Entity();
 
+    Material mat("" STRIFY(ASSET_DIR) "/simple-phong.mat");
+
+    vector<SolidMesh*> meshes;
+    for (int i = 0; i < 19; i++) {
+      vector<Geometry> minnowgeo;
+      string num = i < 9 ? string("0") + to_string(i+1) : to_string(i+1);
+      Geometry::loadFullObj((string("" STRIFY(ASSET_DIR) "/minnow2/Minnow_0000")
+        + num + string(".obj")).c_str(), minnowgeo);
+      SolidMesh* mesh = new SolidMesh(minnowgeo);
+      mesh->setMaterial(mat);
+      meshes.push_back(mesh);
+    }
+
+    Pose* pose = new Pose(glm::vec3(0, 3, 5));
+    pose->scale = glm::vec3(1, 1, 1);
+    pose->orient = glm::angleAxis(glm::radians(90.0f), glm::vec3(0, 1, 0));
+    minnow->attach(new AnimatableMesh(new Animation(meshes, 0.066)));
+    minnow->attach(pose);
+  }
+
+  Entity* cube2;
+  {
+    cube2 = new Entity();
+    
+    Material mat("" STRIFY(ASSET_DIR) "/simple-phong.mat");
+    
+    vector<Geometry> cubegeo;
+    Geometry::loadFullObj("" STRIFY(ASSET_DIR) "/cube.obj", cubegeo);
+    
+    SolidMesh* mesh = new SolidMesh(cubegeo);
+    mesh->setMaterial(mat);
+    
+    Pose* pose = new Pose(glm::vec3(0, 3, 2));
+    pose->scale = glm::vec3(0.1, 0.1, 0.1);
+    pose->orient = glm::angleAxis(glm::radians(45.0f), glm::vec3(0, 1, 0));
+    cube2->attach(mesh);
+    cube2->attach(pose);
+  }
+
+  Entity* cube3;
+  {
+    cube3 = new Entity();
+    
+    Material mat("" STRIFY(ASSET_DIR) "/simple-phong.mat");
+    
+    vector<Geometry> cubegeo;
+    Geometry::loadFullObj("" STRIFY(ASSET_DIR) "/cube.obj", cubegeo);
+    
+    SolidMesh* mesh = new SolidMesh(cubegeo);
+    mesh->setMaterial(mat);
+    
+    Pose* pose = new Pose(glm::vec3(2, 3, 30));
+    pose->scale = glm::vec3(0.1, 0.1, 0.1);
+    pose->orient = glm::angleAxis(glm::radians(45.0f), glm::vec3(0, 1, 0));
+    cube3->attach(mesh);
+    cube3->attach(pose);
+  }
+
+  Entity* antenna;
+  {
+    antenna = new Entity();
+
+    Material mat("" STRIFY(ASSET_DIR) "/simple-phong.mat");
+
+    vector<Geometry> antennaGeo = vector<Geometry>();
+    antennaMesh = new SolidMesh(antennaGeo);
+    antennaMesh->setMaterial(mat);
+    antenna->attach(antennaMesh);
+  }
+
+  gstate.activeScene->addEntity(minnow);
   gstate.activeScene->addEntity(groundplane);
   gstate.activeScene->addEntity(mamaCube);
+  gstate.activeScene->addEntity(cube2);
+  gstate.activeScene->addEntity(cube3);
+  gstate.activeScene->addEntity(antenna);
 
   gstate.activeScene->addEntity(sun);
   gstate.activeScene->addEntity(pointlight);

@@ -8,6 +8,7 @@
 
 #include "PostProcessor.h"
 #include "components/SimpleComponents.hpp"
+#include "components/AnimationComponents.hpp"
 #include "components/Geometry.hpp"
 #include "LightingComponents.hpp"
 
@@ -21,13 +22,13 @@ static void initDeferredBuffers(int width, int height, RenderSystem::Buffers &bu
 static void initOutputFBO(GLuint* render_out_FBO, GLuint* render_out_color, int w_width, int w_height, GLenum filter);
 static void bindGBuf(RenderSystem::Buffers &buffers, Program* shader);
 
-static void postProcess(/*...*/);
-
 static void createGBufAttachment(int width, int height, vector<unsigned int> &buffers, unsigned int channel_type, unsigned int channels, unsigned int type);
 static void setGBufAttachment(RenderSystem::Buffers &buffers);
 static void setGBufDepth(int width, int height, RenderSystem::Buffers &buffers);
 
 static void drawGeometry(const Geometry &geomcomp, RenderSystem::MVPset &MVP, Program* shader);
+static void drawGeometry(const Geometry &geomcomp, const Geometry *geomcomp2, 
+  RenderSystem::MVPset &MVP, Program* shader, double interp);
 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
         // RenderSystem functions
@@ -37,7 +38,7 @@ void RenderSystem::init(ApplicationState &appstate){
   glfwGetFramebufferSize(appstate.window, &w_width, &w_height);
   glViewport(0, 0, w_width, w_height);
 
-  shaderlib = &appstate.resources.shaderlib;
+  shaderlib = &appstate.shaderlib;
 
   deferred_export = shaderlib->getPtr("deferred-export");
   deferred_uber = shaderlib->getPtr("deferred-uber");
@@ -59,21 +60,21 @@ void RenderSystem::init(ApplicationState &appstate){
 }
 
 void RenderSystem::setMVP(Camera* camera) {
-	MVP.P = MatrixStack(camera->getPerspective(static_cast<double>(w_width) / w_height));
-	MVP.M.loadIdentity();
-	MVP.V = MatrixStack(camera->getView());
+  MVP.P = MatrixStack(camera->getPerspective(static_cast<double>(w_width) / w_height));
+  MVP.M.loadIdentity();
+  MVP.V = MatrixStack(camera->getView());
 }
 
 void RenderSystem::geometryPass(GameState &gstate) {
-	Camera* camera;
-	if (!(camera = gstate.activeScene->camera)) {
-		return;
-	}
+  Camera* camera;
+  if (!(camera = gstate.activeScene->camera)) {
+    return;
+  }
 
-	setMVP(camera);
+  setMVP(camera);
 
-	prepareDeferred(deferred_buffers.gBuffer);
-	drawEntities(gstate.activeScene, deferred_export);
+  prepareDeferred(deferred_buffers.gBuffer);
+  drawEntities(gstate.activeScene, deferred_export);
 }
 
 void RenderSystem::render(ApplicationState &appstate, GameState &gstate, double elapsedTime){
@@ -87,10 +88,10 @@ void RenderSystem::render(ApplicationState &appstate, GameState &gstate, double 
   drawEntities(gstate.activeScene, deferred_shadow);
 
   updateShadowMap();
-  updateCaustic();
+  updateCaustic(elapsedTime, 24.0);
   applyShading(gstate.activeScene, *shaderlib);
 
-  PostProcessor::doPostProcessing(render_out_color, 0);
+  PostProcessor::doPostProcessing(render_out_color, deferred_buffers.depthBuffer);
 }
 
 // This function is aweful and I hate it.
@@ -162,17 +163,41 @@ void RenderSystem::onResize(GLFWwindow *window, int width, int height){
 
 void RenderSystem::drawEntities(Scene* scene, Program* shader){
   for(pair<const Entity*, Entity*> entpair : scene->entities){
-    drawEntity(entpair.second, shader);
+    drawEntity(entpair.second, shader, true);
+  }
+  while (!(renderq.empty())) {
+    drawEntity(renderq.front(), shader, false);
+    renderq.pop();
   }
 }
 
-void RenderSystem::drawEntity(const Entity* entity, Program* shader){
-  SolidMesh* mesh = NULL;
+void RenderSystem::drawEntity(const Entity* entity, Program* shader, bool buildq){
+  SolidMesh* mesh = NULL, *mesh2;
   Pose* pose = NULL;
+  AnimatableMesh* anim = NULL;
   for(Component *cmpnt : entity->components){
     GATHER_SINGLE_COMPONENT(mesh, SolidMesh*, cmpnt);
     GATHER_SINGLE_COMPONENT(pose, Pose*, cmpnt);
+    GATHER_SINGLE_COMPONENT(anim, AnimatableMesh*, cmpnt);
     
+    if (anim && pose) {
+      if (buildq) {
+        renderq.push(entity);
+        return;
+      }
+      MVP.M.pushMatrix();
+      MVP.M.multMatrix(pose->getAffineMatrix());
+      mesh = anim->getCurrentMesh();
+      mesh2 = anim->getNextMesh();
+      for (int i = 0; i < mesh->geometries.size(); i++) {
+        drawGeometry(mesh->geometries[i], &mesh2->geometries[i],
+          MVP, shader, anim->dtLastKeyFrame / anim->timeForKeyFrame());
+      }
+      MVP.M.popMatrix();
+      mesh = mesh2 = NULL;
+      pose = NULL;
+      return;
+    }
     if(mesh && pose){
       MVP.M.pushMatrix();
       MVP.M.multMatrix(pose->getAffineMatrix());
@@ -195,14 +220,22 @@ void RenderSystem::drawEntity(const Entity* entity, Program* shader){
 }
 
 static void drawGeometry(const Geometry &geomcomp, RenderSystem::MVPset &MVP, Program* shader){
+  drawGeometry(geomcomp, NULL, MVP, shader, 0);
+}
+
+static void drawGeometry(const Geometry &geomcomp, const Geometry *geomcomp2, 
+  RenderSystem::MVPset &MVP, Program* shader, double interp){
   int h_pos, h_nor, h_tex;
+  int h_pos2, h_nor2, h_tex2;
   h_pos = h_nor = h_tex = -1;
+  h_pos2 = h_nor2 = h_tex2 = -1;
 
   geomcomp.material.apply(shader);
 
   glUniformMatrix4fv(shader->getUniform("M"), 1, GL_FALSE, value_ptr(MVP.M.topMatrix()));
   glUniformMatrix4fv(shader->getUniform("V"), 1, GL_FALSE, value_ptr(MVP.V.topMatrix()));
   glUniformMatrix4fv(shader->getUniform("P"), 1, GL_FALSE, value_ptr(MVP.P.topMatrix()));
+  glUniform1f(shader->getUniform("interp"), interp);
 
   glBindVertexArray(geomcomp.vaoID);
   // Bind position buffer
@@ -228,6 +261,33 @@ static void drawGeometry(const Geometry &geomcomp, RenderSystem::MVPset &MVP, Pr
       glVertexAttribPointer(h_tex, 2, GL_FLOAT, GL_FALSE, 0, (const void *)0);
     }
   }
+
+  if (geomcomp2) {
+    // Bind position buffer
+    h_pos2 = shader->getAttribute("vertPos2");
+    GLSL::enableVertexAttribArray(h_pos2);
+    glBindBuffer(GL_ARRAY_BUFFER, geomcomp2->posBufID);
+    glVertexAttribPointer(h_pos2, 3, GL_FLOAT, GL_FALSE, 0, (const void *)0);
+
+    // Bind normal buffer
+    h_nor2 = shader->getAttribute("vertNor2");
+    if(h_nor2 != -1 && geomcomp2->norBufID != 0) {
+      GLSL::enableVertexAttribArray(h_nor2);
+      glBindBuffer(GL_ARRAY_BUFFER, geomcomp2->norBufID);
+      glVertexAttribPointer(h_nor2, 3, GL_FLOAT, GL_FALSE, 0, (const void *)0);
+    }
+    
+    if (geomcomp2->texBufID != 0) {  
+      // Bind texcoords buffer
+      h_tex2 = shader->getAttribute("vertTex2");
+      if(h_tex2 != -1 && geomcomp2->texBufID != 0) {
+        GLSL::enableVertexAttribArray(h_tex2);
+        glBindBuffer(GL_ARRAY_BUFFER, geomcomp2->texBufID);
+        glVertexAttribPointer(h_tex2, 2, GL_FLOAT, GL_FALSE, 0, (const void *)0);
+      }
+    }
+
+  }
   
   // Bind element buffer
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, geomcomp.eleBufID);
@@ -243,6 +303,17 @@ static void drawGeometry(const Geometry &geomcomp, RenderSystem::MVPset &MVP, Pr
     GLSL::disableVertexAttribArray(h_nor);
   }
   GLSL::disableVertexAttribArray(h_pos);
+
+  if (geomcomp2) {
+    if(h_tex2 != -1) {
+      GLSL::disableVertexAttribArray(h_tex2);
+    }
+    if(h_nor2 != -1) {
+      GLSL::disableVertexAttribArray(h_nor2);
+    }
+    GLSL::disableVertexAttribArray(h_pos2);
+  }
+
   glBindBuffer(GL_ARRAY_BUFFER, 0);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
@@ -288,16 +359,16 @@ static void createGBufAttachment(int width, int height, vector<unsigned int> &bu
 }
 
 static void setGBufDepth(int width, int height, RenderSystem::Buffers &buffers) {
-	glGenTextures(1, &buffers.depthBuffer);
-	glBindTexture(GL_TEXTURE_2D, buffers.depthBuffer);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, width, height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, buffers.depthBuffer, 0);
-	glDrawBuffer(GL_NONE);
-	glReadBuffer(GL_NONE);
+  glGenTextures(1, &buffers.depthBuffer);
+  glBindTexture(GL_TEXTURE_2D, buffers.depthBuffer);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, width, height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, buffers.depthBuffer, 0);
+  glDrawBuffer(GL_NONE);
+  glReadBuffer(GL_NONE);
 }
 
 static void initDeferredBuffers(int width, int height, RenderSystem::Buffers &buffers){
@@ -305,11 +376,11 @@ static void initDeferredBuffers(int width, int height, RenderSystem::Buffers &bu
   glGenFramebuffers(1, &(buffers.gBuffer));
   glBindFramebuffer(GL_FRAMEBUFFER, buffers.gBuffer);
   //32 bit floats may not be supported on some systems.
-  createGBufAttachment(width, height, buffers.buffers, GL_RGB16F, GL_RGB, GL_FLOAT);		//position buffer
-  createGBufAttachment(width, height, buffers.buffers, GL_RGB16F, GL_RGB, GL_FLOAT);		//normal buffer
-  createGBufAttachment(width, height, buffers.buffers, GL_RGBA, GL_RGBA, GL_UNSIGNED_INT);	//color/emit buffer
-  createGBufAttachment(width, height, buffers.buffers, GL_RGBA, GL_RGBA, GL_UNSIGNED_INT);	// Specular/shine buffer
-  setGBufDepth(width, height, buffers);														//Depth buffer
+  createGBufAttachment(width, height, buffers.buffers, GL_RGB16F, GL_RGB, GL_FLOAT);    //position buffer
+  createGBufAttachment(width, height, buffers.buffers, GL_RGB16F, GL_RGB, GL_FLOAT);    //normal buffer
+  createGBufAttachment(width, height, buffers.buffers, GL_RGBA, GL_RGBA, GL_UNSIGNED_INT);  //color/emit buffer
+  createGBufAttachment(width, height, buffers.buffers, GL_RGBA, GL_RGBA, GL_UNSIGNED_INT);  // Specular/shine buffer
+  setGBufDepth(width, height, buffers);                           //Depth buffer
   setGBufAttachment(buffers);
   if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
     fprintf(stderr, "Framebuffer not complete!\n");
@@ -338,14 +409,14 @@ void RenderSystem::initCaustics() {
   causticDir = "" STRIFY(ASSET_DIR) "/caustics";
 
   for (int i = 0; i < CAUSTIC_COUNT; i++) {
-      char filename[80];
-      sprintf(filename, "/caustic%02d.jpg", i + 1);
-
-      caustics[i] = make_shared<Texture>();
-      caustics[i]->setFilename(causticDir + filename);
-      caustics[i]->init();
-      caustics[i]->setUnit(deferred_buffers.buffers.size() + i);
-      caustics[i]->setWrapModes(GL_REPEAT, GL_REPEAT);
+    char filename[80];
+    sprintf(filename, "/caustic%02d.jpg", i + 1);
+    
+    caustics[i] = make_shared<Texture>();
+    caustics[i]->setFilename(causticDir + filename);
+    caustics[i]->init();
+    caustics[i]->setUnit(deferred_buffers.buffers.size() + i);
+    caustics[i]->setWrapModes(GL_REPEAT, GL_REPEAT);
   }
 }
 
@@ -378,11 +449,13 @@ void RenderSystem::updateDepthUniforms() {
   deferred_shadow->unbind();
 }
 
-void RenderSystem::updateCaustic() {
+void RenderSystem::updateCaustic(double elapsedTime, double speedMod) {
   deferred_uber->bind();
 
-  caustics[currCaustic]->bind(deferred_uber->getUniform("caustic"));
-  currCaustic = ++currCaustic >= CAUSTIC_COUNT ? 0 : currCaustic;
+  caustics[(int)currCaustic]->bind(deferred_uber->getUniform("caustic"));
+
+  currCaustic += (elapsedTime* speedMod);
+  currCaustic = currCaustic >= CAUSTIC_COUNT ? 0 : currCaustic;
 
   deferred_uber->unbind();
 }

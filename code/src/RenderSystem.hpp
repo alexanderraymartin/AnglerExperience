@@ -56,9 +56,10 @@ namespace RenderSystem{
 
   const static int CAUSTIC_COUNT = 32;
   static DepthSet depthSet;
-  static int currCaustic = 0;
+  static double currCaustic = 0;
   static string causticDir;
   static std::shared_ptr<Texture> caustics[CAUSTIC_COUNT];
+  static std::queue<const Entity*> renderq;
 
   static GLuint shadowFramebuffer;
   static GLuint shadowTexture;
@@ -77,12 +78,9 @@ namespace RenderSystem{
 
   void drawEntities(Scene* scene, Program* shader);
 
-  void drawEntity(const Entity* entity, Program* shader);
-
-  void runFXAA();
+  void drawEntity(const Entity* entity, Program* shader, bool buildq);
 
   void onResize(GLFWwindow *window, int width, int height);
-
 
   void initDepthUniforms(double causticOrtho, double shadowOrtho);
 
@@ -90,7 +88,7 @@ namespace RenderSystem{
 
   void initCaustics();
 
-  void updateCaustic();
+  void updateCaustic(double elapsedTime, double speedMod);
 
   void initShadowMap(int width, int height);
 
