@@ -43,8 +43,6 @@ using namespace std;
 
 // #define FORCEWINDOW
 
-static double mouseX = 0;
-static double mouseY = 0;
 static SolidMesh* antennaMesh;
 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -58,7 +56,6 @@ static void initScene(ApplicationState &appstate, GameState &gstate, Camera* cam
 
 static GLFWmonitor* autoDetectScreen(UINT* width, UINT* height);
 static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
-static void cursor_callback(GLFWwindow *window, double posX, double posY);
 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
         // END Forward Declarations
@@ -81,6 +78,7 @@ int main(int argc, char** argv){
 
   RenderSystem::init(appstate);
 
+  double mouseX, mouseY;
   AntennaGenerator *antennaGen = new AntennaGenerator();
 
   gstate.gameTime.reset();
@@ -105,6 +103,7 @@ int main(int argc, char** argv){
     // try and keep all that linked together inside of the single RenderSystem for simplicity and
     // so that not buffers or other data has to be shared between calls here in main(). 
 
+    glfwGetCursorPos(appstate.window, &mouseX, &mouseY);
     vec3 mousePos = MouseProcessing::getWoldSpace(mouseX, mouseY, appstate.window, camera);
 
     Geometry* geo = antennaGen->generateAntenna(vec3(-0.5f, 3.0f, 2.0f), mousePos);
@@ -198,13 +197,10 @@ static void initGLFW(ApplicationState &appstate){
   }
   glfwMakeContextCurrent(appstate.window);
 
-  glfwGetCursorPos(appstate.window, &mouseX, &mouseY);
-
   glfwSwapInterval(1);
   // glfwSetInputMode(appstate.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
   glfwSetFramebufferSizeCallback(appstate.window, RenderSystem::onResize);
   glfwSetKeyCallback(appstate.window, key_callback);
-  glfwSetCursorPosCallback(appstate.window, cursor_callback);
 }
 
 static void initShaders(ApplicationState &appstate){
@@ -397,12 +393,6 @@ static GLFWmonitor* autoDetectScreen(UINT* width, UINT* height){
     // Either 16:9 or 16:10, should be fine in fullscreen. 
     return(primary);
   }
-}
-
-static void cursor_callback(GLFWwindow *window, double posX, double posY)
-{
-  mouseX = posX;
-  mouseY = posY;
 }
 
 // This should be considered temporary untill a proper menu is established. In playable
