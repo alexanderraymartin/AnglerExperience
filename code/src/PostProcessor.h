@@ -19,7 +19,7 @@
 #define DEPTH_OF_FIELD_BLUR_AMOUNT 3
 #define LOW_RES_FBO_SCALE 4
 
-#define HAS_POST_PROCESSING false
+#define HAS_POST_PROCESSING true
 
 namespace PostProcessor{
 
