@@ -130,3 +130,67 @@ glm::mat4 DynamicCamera::getPerspective(float aspect) {
 vec3 DynamicCamera::dirToCenter() {
 	return defaultRotation - viewDirection;
 }
+
+
+
+void FPcamera::update(GLFWwindow* window, float elapsedTime){
+	vec2 deltaMouse;
+	double x, y;
+	glfwGetCursorPos(window, &x, &y);
+	if(first){
+		deltaMouse = vec2(0.0f); 
+		first = !first;
+	}else{
+		deltaMouse = vec2((float) x - mousePos.x, (float) y - mousePos.y);
+	}
+	mousePos = vec2((float) x,(float) y);
+
+	vec3 viewDir = getViewDir();
+	vec3 rightDir = cross(viewDir, upDir);
+
+	pose.orient *= angleAxis((float) -(1.0/480.0)*deltaMouse.x, upDir);
+	pose.orient *= angleAxis((float) -(1.0/480.0)*deltaMouse.y, rightDir);
+
+	float finalmult = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ? speedmult*4.0 : speedmult;
+
+	if(glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS){
+		pose.loc += viewDir*elapsedTime*finalmult;
+	}
+	if(glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS){
+		pose.loc -= viewDir*elapsedTime*finalmult;
+	}
+	if(glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS){
+		pose.loc += rightDir*elapsedTime*finalmult;
+	}
+	if(glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS){
+		pose.loc -= rightDir*elapsedTime*finalmult;
+	}
+	if(glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS){
+		pose.loc += upDir*elapsedTime*finalmult;
+	}
+	if(glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS){
+		pose.loc -= upDir*elapsedTime*finalmult;
+	}
+}
+
+glm::vec3 FPcamera::getLocation(){
+	return(pose.loc);
+}
+
+glm::vec3 FPcamera::getViewDir(){
+	return(toMat3(pose.orient)*vec3(0.0, 0.0, 1.0));
+}
+
+//Returns the view matrix
+glm::mat4 FPcamera::getView(){
+	return(glm::lookAt(
+		pose.loc,
+		pose.loc + toMat3(pose.orient)*vec3(0.0, 0.0, 1.0),
+		upDir
+	));
+}
+
+//Returns the perspective matrix associated with the camera
+glm::mat4 FPcamera::getPerspective(float aspect){
+	return(perspective(glm::radians(fov), aspect, near, far));
+}

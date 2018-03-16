@@ -95,4 +95,35 @@ public:
 
 };
 
+class FPcamera : public Camera{
+public:
+	FPcamera() : pose(vec3(0.0)) {};
+	FPcamera(const glm::vec3& loc) : pose(loc) {}
+
+	void update(GLFWwindow* window, float elapsedTime);
+
+	glm::vec3 getLocation();
+
+	glm::vec3 getViewDir();
+
+	//Returns the view matrix
+	glm::mat4 getView();
+
+	//Returns the perspective matrix associated with the camera
+	glm::mat4 getPerspective(float aspect);
+
+	float fov = 35.0f;
+	float near = .01f;
+	float far = 100.0f;
+
+protected:
+
+	Pose pose;
+	glm::vec3 upDir = glm::vec3(0.0, 1.0, 0.0);
+
+	glm::vec2 mousePos;
+	bool first = true;
+	float speedmult = 1.0f;
+};
+
 #endif // !CAMERA_H_

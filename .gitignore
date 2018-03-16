@@ -302,3 +302,8 @@ __pycache__/
 
 # MacOS
 .DS_Store
+
+# Blender
+*.blend1
+*.blend2
+*.blend3

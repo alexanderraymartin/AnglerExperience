@@ -24,22 +24,42 @@ class Pose : public Component{
   Pose(const glm::vec3 nloc) : loc(nloc){};
   Pose(const glm::vec3 nloc, const glm::quat nori): loc(nloc), orient(nori){};
 
-  glm::mat4 getAffineMatrix(){return(glm::translate(glm::mat4(1.0), loc) * glm::toMat4(orient) * glm::scale(glm::mat4(1.0), scale));}
+  glm::mat4 getAffineMatrix(){return(glm::translate(glm::mat4(1.0), loc) * glm::toMat4(orient) * glm::scale(glm::mat4(1.0), scale) * preaffine);}
 
   glm::vec3 loc = glm::vec3(0.0);
   glm::quat orient;
   glm::vec3 scale = glm::vec3(1.0);
+
+  glm::mat4 preaffine = glm::mat4(1.0);
 };
 
 class SolidMesh : public Component{
  public:
-  SolidMesh();
   SolidMesh(vector<Geometry> &copygeom){geometries = copygeom;}
   ~SolidMesh(){};
 
   void setMaterial(Material &mat) {for(Geometry &geom : geometries){geom.material = mat;}}
 
   vector<Geometry> geometries;
+};
+
+// This serves simply to seperate the ground plane from standard meshes
+class GroundPlane : public Component {
+ public:
+  GroundPlane(const vec3& origin, const quat& orient, const vec3& scale) : levelOrigin(origin), levelOrient(orient), levelScale(scale) {}
+
+  glm::mat4 getAffineMatrix(float levelProgress, int offset){
+    return(
+      glm::translate(glm::mat4(1.0), levelOrigin) * 
+      glm::toMat4(levelOrient) * 
+      glm::translate(glm::mat4(1.0), vec3(levelScale.x*2.00f + - mod(levelProgress+(levelScale.x*2.0f*(!offset)), levelScale.x*4.0f), 0.0f, 0.0f)) * 
+      glm::scale(glm::mat4(1.0), levelScale)
+    );
+  }
+ private:
+  glm::vec3 levelOrigin;
+  glm::quat levelOrient;
+  glm::vec3 levelScale;
 };
 
 class Camera : public Component{

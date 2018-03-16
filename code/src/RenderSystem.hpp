@@ -29,6 +29,7 @@ namespace RenderSystem{
   static Program* deferred_export = NULL;
   static Program* deferred_uber = NULL;
   static Program* deferred_shadow = NULL;
+  static Program* seafloor_deform = NULL;
 
   static ShaderLibrary* shaderlib = NULL;
   
@@ -49,6 +50,7 @@ namespace RenderSystem{
 
   struct DepthSet {
     MatrixStack lightView;
+    MatrixStack causticView;
     MatrixStack causticOrtho;
     MatrixStack shadowOrtho;
     MatrixStack bias;
@@ -79,6 +81,8 @@ namespace RenderSystem{
   void drawEntities(Scene* scene, Program* shader);
 
   void drawEntity(const Entity* entity, Program* shader, bool buildq);
+
+  void drawGroundPlane(const GameState& gstate, Program* program);
 
   void onResize(GLFWwindow *window, int width, int height);
 

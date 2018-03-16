@@ -13,12 +13,14 @@ Timeline<T>::Timeline(T (*sourcefunc)()){
   timeSource = sourcefunc;
   start = timeSource();
   lastTime = 0.0;
+  lastElapsed = 0.0;
   pausetime = 0.0;
 }
 template <typename T>
 Timeline<T>::Timeline(){
   start = 0.0;
   lastTime = 0.0;
+  lastElapsed = 0.0;
   pausetime = 0.0;
 }
 
@@ -50,8 +52,8 @@ T Timeline<T>::elapsed(){
   if(paused){
     return(0.0);
   }else{
-    T tmp = (timeSource() - start + pausetime)-lastTime;
-    lastTime = timeSource();
+    T tmp = (timeSource() - start + pausetime)-lastElapsed;
+    lastElapsed = timeSource();
     return(tmp);
   }
 }

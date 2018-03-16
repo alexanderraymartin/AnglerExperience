@@ -33,11 +33,12 @@ class SunLight : public LightingComponent{
  public:
   SunLight();
   SunLight(const vec3 &color) : color(color) {}
-  SunLight(const vec3 &color, const vec3 &direction) : color(color), direction(direction) {}
-  SunLight(const vec3 &color, const vec3 &direction, float intensity) : color(color), direction(direction), intensity(intensity) {}
+  SunLight(const vec3 &color, const vec3 &direction, const vec3& location) : color(color), direction(direction), location(location) {}
+  SunLight(const vec3 &color, const vec3 &direction, const vec3& location, float intensity) : color(color), direction(direction), location(location), intensity(intensity) {}
 
   vec3 color = vec3(1.0);
   vec3 direction = vec3(0.0, -1.0, 0.0);
+  vec3 location = vec3(0.0);
   float intensity = 1.0;
 };
 

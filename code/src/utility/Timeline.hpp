@@ -27,6 +27,7 @@ protected:
   T (*timeSource)()=NULL;
   T start;
   T pausetime;
+  T lastElapsed;
   
   bool paused = false;
 };

@@ -44,6 +44,7 @@ void RenderSystem::init(ApplicationState &appstate){
   deferred_uber = shaderlib->getPtr("deferred-uber");
   deferred_shadow = shaderlib->getPtr("deferred-shadow");
   deferred_shadow->setVerbose(false);
+  seafloor_deform = shaderlib->getPtr("seafloor-deform");
 
   glEnable(GL_DEPTH_TEST);
   glDisable(GL_BLEND);
@@ -74,6 +75,7 @@ void RenderSystem::geometryPass(GameState &gstate) {
   setMVP(camera);
 
   prepareDeferred(deferred_buffers.gBuffer);
+  drawGroundPlane(gstate, seafloor_deform);
   drawEntities(gstate.activeScene, deferred_export);
 }
 
@@ -92,6 +94,7 @@ void RenderSystem::render(ApplicationState &appstate, GameState &gstate, double 
   applyShading(gstate.activeScene, *shaderlib);
 
   PostProcessor::doPostProcessing(render_out_color, deferred_buffers.depthBuffer);
+
 }
 
 // This function is aweful and I hate it.
@@ -121,9 +124,11 @@ void RenderSystem::updateLighting(Scene* scene){
         glUniform3fv(deferred_uber->getUniform("sunCol"), 1, value_ptr(sun->color));
         glUniform3fv(deferred_uber->getUniform("sunDir"), 1, value_ptr(sun->direction));
 
-        vec3 lightPos = vec3(0, 10, 0);
         depthSet.lightView.loadIdentity();
-        depthSet.lightView.lookAt(lightPos, lightPos + sun->direction, vec3(0,1,0));
+        depthSet.lightView.lookAt(vec3(0.0, 10, 0.0), vec3(0.0, 10, 0.0) + sun->direction, vec3(0,1,0));
+
+        depthSet.causticView.loadIdentity();
+        depthSet.causticView.lookAt(sun->location, sun->location + sun->direction, vec3(0,1,0));
 
       }else if(ptcomp && pose){
         // This would be a great place to implement DOD
@@ -149,17 +154,41 @@ void RenderSystem::applyShading(Scene* scene, ShaderLibrary &shaderlib){
   PostProcessor::drawFSQuad();
 }
 
-void RenderSystem::onResize(GLFWwindow *window, int width, int height){
-  w_width = width;
-  w_height = height;
-  glViewport(0, 0, width, height);
-  PostProcessor::resize(width, height);
-}
+void RenderSystem::drawGroundPlane(const GameState& gstate, Program* shader){
+  GroundPlane* ground = nullptr;
+  double chunkswap = gstate.levelScale.x*4.0;
+  double chunkhalf = chunkswap*.5;
+  for(pair<const Entity*, Entity*> entpair : gstate.activeScene->entities){
+    SolidMesh* mesh = nullptr;
+    for(Component *cmpnt : entpair.second->components){
+      GATHER_SINGLE_COMPONENT(ground, GroundPlane*, cmpnt);
+      GATHER_HIDDEN_SINGLE_COMPONENT(mesh, SolidMesh*, cmpnt);
 
-// =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-        // Static Functions and Helpers
-// It may be possible to move some parts of this into one or more libraries. 
-// =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+      if(ground && mesh){
+        MVP.M.pushMatrix();
+        MVP.M.multMatrix(ground->getAffineMatrix(gstate.levelProgress, 0));
+        for(Geometry &geo : mesh->geometries){
+          shaderlib->fastActivate(shader);
+          glUniform1f(shader->getUniform("offset"), 2.0f*floor((gstate.levelProgress+chunkhalf)/chunkswap));
+          glUniform3fv(shader->getUniform("groundScale"), 1, value_ptr(gstate.levelScale));
+          drawGeometry(geo, MVP, shader);
+        }
+        MVP.M.popMatrix();
+
+        MVP.M.pushMatrix();
+        MVP.M.multMatrix(ground->getAffineMatrix(gstate.levelProgress, 1));
+        for(Geometry &geo : mesh->geometries){
+          shaderlib->fastActivate(shader);
+          glUniform1f(shader->getUniform("offset"), 2.0f*(floor(gstate.levelProgress/chunkswap)+.5));
+          drawGeometry(geo, MVP, shader);
+        }
+        MVP.M.popMatrix();
+
+        return;
+      }
+    }
+  }
+}
 
 void RenderSystem::drawEntities(Scene* scene, Program* shader){
   for(pair<const Entity*, Entity*> entpair : scene->entities){
@@ -218,6 +247,18 @@ void RenderSystem::drawEntity(const Entity* entity, Program* shader, bool buildq
     }
   }
 }
+
+void RenderSystem::onResize(GLFWwindow *window, int width, int height){
+  w_width = width;
+  w_height = height;
+  glViewport(0, 0, width, height);
+  PostProcessor::resize(width, height);
+}
+
+// =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+        // Static Functions and Helpers
+// It may be possible to move some parts of this into one or more libraries. 
+// =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 static void drawGeometry(const Geometry &geomcomp, RenderSystem::MVPset &MVP, Program* shader){
   drawGeometry(geomcomp, NULL, MVP, shader, 0);
@@ -431,7 +472,7 @@ void RenderSystem::initDepthUniforms(double causticSize, double shadowSize) {
 }
 
 void RenderSystem::updateDepthUniforms() {
-  mat4 causticMatrix = depthSet.bias.topMatrix() * depthSet.causticOrtho.topMatrix() * depthSet.lightView.topMatrix();
+  mat4 causticMatrix = depthSet.bias.topMatrix() * depthSet.causticOrtho.topMatrix() * depthSet.causticView.topMatrix();
   mat4 shadowMatrix = depthSet.bias.topMatrix() * depthSet.shadowOrtho.topMatrix() * depthSet.lightView.topMatrix();
   mat4 depthMatrix = depthSet.shadowOrtho.topMatrix() * depthSet.lightView.topMatrix();
 

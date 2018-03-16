@@ -32,6 +32,8 @@ uniform sampler2D shadowMap;
 uniform mat4 causticMatrix;
 uniform mat4 shadowMatrix;
 
+uniform float levelProgress;
+
 void main()
 {             
   // retrieve data from G-buffer
@@ -77,7 +79,7 @@ void main()
     visibility = 0.25;
   }
 
-  lighting = mix(lighting, lighting*caustColor.rgb, caustColor.a) * INV(BackMask);
+  lighting = mix(lighting, lighting*caustColor.rgb, caustColor.a*.8) * INV(BackMask);
 
   lighting = mix(lighting, BACKGROUND, BackMask) * visibility;
 

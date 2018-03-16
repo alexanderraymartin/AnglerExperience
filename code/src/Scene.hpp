@@ -28,6 +28,9 @@ class Scene{
 
   void clearKillQ();
 
+  template<typename C>
+  Entity* getFirstWithComponent(bool hidden = false);
+
   Camera* camera = NULL;
 
   // Unorderded map probably has some overhead compared to vector when it comes to iterating over 
@@ -43,5 +46,23 @@ class Scene{
   //Contiguous data goes below this line if needed
 
 };
+
+template<typename C>
+Entity* Scene::getFirstWithComponent(bool hidden){
+    C* component = nullptr;
+    for(pair<const Entity*, Entity*> entpair : entities){
+      for(Component *cmpnt : entpair.second->components){
+        if(hidden){
+          if(CATCH_HIDDEN_COMPONENT(component, C*, cmpnt)){
+            return(entpair.second);
+          }
+        }else{
+          if(CATCH_COMPONENT(component, C*, cmpnt)){
+            return(entpair.second);
+          }
+        }
+      }
+    }
+  }
 
 #endif

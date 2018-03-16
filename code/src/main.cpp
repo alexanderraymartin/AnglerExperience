@@ -36,13 +36,14 @@
 
 #include "RenderSystem.hpp"
 #include "AnimationSystem.hpp"
+#include "GameplaySystem.hpp"
 #include "MouseProcessing.hpp"
 #include "AntennaGenerator.hpp"
 #include "PostProcessor.h"
 
 using namespace std;
 
-#define FORCEWINDOW
+// #define FORCEWINDOW
 
 static SolidMesh* antennaMesh;
 static vector<Spawner*> spawners;
@@ -87,21 +88,22 @@ int main(int argc, char** argv){
   gstate.gameTime.reset();
   while(!glfwWindowShouldClose(appstate.window)){
 
-    double dt = gstate.fxAnimTime.elapsed();
+    double fxdt = gstate.fxAnimTime.elapsed();
+    double gdt = gstate.gameTime.elapsed();
     // TODO: Appropriate timestep loop structure
     {
       // TODO: PlayerSystem::update(appstate, gstate, elapsedTime);
       // TODO: CameraSystem::update(appstate, gstate, elapsedTime);
-		camera->update(appstate.window, dt);
+		camera->update(appstate.window, fxdt);
 		//SpawnSystem::update(appstate, gstate, dt);
 		for (Spawner* s : spawners) {
-			s->update(gstate, dt);
+			s->update(gstate, gdt);
 		}
       // TODO: SwarmSystem::update(appstate, gstate, elapsedTime);
       // TODO: PhysicsSystem::update(appstate, gstate, elapsedTime);
       // TODO: ParticleSystem::update(appstate, gstate, elapsedTime); // Particle System System*
-      // TODO: GameplaySystem::update(appstate, gstate, elapsedTime);
-      AnimationSystem::update(appstate, gstate, dt);
+      GameplaySystem::update(appstate, gstate, gdt);
+      AnimationSystem::update(appstate, gstate, fxdt);
     }
 
     // Rendering happens here. This 'RenderSystem' will end up containing a lot and effectively
@@ -116,7 +118,7 @@ int main(int argc, char** argv){
     Geometry* geo = antennaGen->generateAntenna(vec3(-0.5f, 3.0f, 2.0f), mousePos);
     antennaMesh->geometries = {*geo};
 
-    RenderSystem::render(appstate, gstate, dt);
+    RenderSystem::render(appstate, gstate, fxdt);
 
     glfwSwapBuffers(appstate.window);
     glfwPollEvents();
@@ -184,7 +186,7 @@ static void initGLFW(ApplicationState &appstate){
   UINT w_width = 854;
   UINT w_height = 480;
 
-  GLFWmonitor* monitor;// = autoDetectScreen(&w_width, &w_height);
+  GLFWmonitor* monitor = autoDetectScreen(&w_width, &w_height);
 
 #ifdef FORCEWINDOW
   monitor = NULL;
@@ -224,6 +226,12 @@ static void initShaders(ApplicationState &appstate){
     appstate.shaderlib.add(it.key(), new Program(it.value()));
     cout << "Loaded shader: " << it.key() << endl;
   }
+
+  // Silence deferred export so tex coords don't complain 
+  Program* defexprt = nullptr;
+  if ((defexprt = appstate.shaderlib.getPtr("deferred-export"))) {
+	  defexprt->setVerbose(false);
+  }
 }
 
 static Entity* createCube(vec3 location) {
@@ -249,38 +257,34 @@ static Entity* createCube(vec3 location) {
 static void initScene(ApplicationState &appstate, GameState &gstate, Camera* camera){
   //StaticCamera* scenecam = new StaticCamera(37.5, glm::vec3(0.0, 3.4, 0.0), glm::vec3(0.0, 3.1, 3.0));
 	gstate.activeScene = new Scene(camera);
+
   Entity* sun;
   {
     sun = new Entity();
     sun->attach(new SunLight(
-      glm::vec3(.7, .7, .65),
-      glm::vec3(0.5, -1.0, 1.0))
+      glm::vec3(.7, .7, .67),
+      glm::vec3(0.5, -1.0, 1.0),
+      glm::vec3(0.0, 10.0, 0.0))
     );
   }
   gstate.activeScene->addEntity(sun);
 
-  Entity* pointlight;
-  {
-    pointlight = new Entity();
-    pointlight->attach(new PointLight(glm::vec3(.2), 1.0, 15.0));
-    pointlight->attach(new Pose(glm::vec3(-1.5, 0.5, 1.0)));
-  }
-  gstate.activeScene->addEntity(pointlight);
 
   Entity* groundplane;
   {
     groundplane = new Entity();
-	Material mat("" STRIFY(ASSET_DIR) "/simple-phong.mat");
-	vector<Geometry> cubegeo;
-	Geometry::loadFullObj("" STRIFY(ASSET_DIR) "/cube.obj", cubegeo);
+
+    Material mat("" STRIFY(ASSET_DIR) "/seafloor.mat");
+
+    vector<Geometry> cubegeo;
+    Geometry::loadFullObj( "" STRIFY(ASSET_DIR) "/LandscapeBasis.obj", cubegeo);
+
     SolidMesh* mesh = new SolidMesh(cubegeo);
     mesh->setMaterial(mat);
+    mesh->isSweepable = false;
 
-    Pose* pose = new Pose(glm::vec3(0.0906, -0.31318, 48.0));
-    pose->orient = glm::angleAxis(glm::radians(4.92f), glm::vec3(.793, -.051, .607));
-    pose->scale = glm::vec3(45.0, .05, 48.0);
     groundplane->attach(mesh);
-    groundplane->attach(pose);
+    groundplane->attach(new GroundPlane(gstate.levelOrigin, gstate.levelOrientation, gstate.levelScale));
   }
 
   vec3 cubeLoc = vec3(0, 3, 10);
@@ -316,57 +320,27 @@ static void initScene(ApplicationState &appstate, GameState &gstate, Camera* cam
 	  minnow->attach(pose);
   }
 
-  Entity* cube2;
-  {
-    cube2 = new Entity();
-	Material mat("" STRIFY(ASSET_DIR) "/simple-phong.mat");
-	vector<Geometry> cubegeo;
-	Geometry::loadFullObj("" STRIFY(ASSET_DIR) "/cube.obj", cubegeo);
-    SolidMesh* mesh = new SolidMesh(cubegeo);
-    mesh->setMaterial(mat);
-    
-    Pose* pose = new Pose(glm::vec3(0, 3, 2));
-    pose->scale = glm::vec3(0.1, 0.1, 0.1);
-    pose->orient = glm::angleAxis(glm::radians(45.0f), glm::vec3(0, 1, 0));
-    cube2->attach(mesh);
-    cube2->attach(pose);
-  }
-
-  Entity* cube3;
-  {
-    cube3 = new Entity();
-	Material mat("" STRIFY(ASSET_DIR) "/simple-phong.mat");
-	vector<Geometry> cubegeo;
-	Geometry::loadFullObj("" STRIFY(ASSET_DIR) "/cube.obj", cubegeo);
-    SolidMesh* mesh = new SolidMesh(cubegeo);
-    mesh->setMaterial(mat);
-    
-    Pose* pose = new Pose(glm::vec3(2, 3, 30));
-    pose->scale = glm::vec3(0.1, 0.1, 0.1);
-    pose->orient = glm::angleAxis(glm::radians(45.0f), glm::vec3(0, 1, 0));
-    cube3->attach(mesh);
-    cube3->attach(pose);
-  }
 
   Entity* antenna;
   {
     antenna = new Entity();
-	Material mat("" STRIFY(ASSET_DIR) "/simple-phong.mat");
+
+    Material mat("" STRIFY(ASSET_DIR) "/simple-phong.mat");
+
     vector<Geometry> antennaGeo = vector<Geometry>();
     antennaMesh = new SolidMesh(antennaGeo);
     antennaMesh->setMaterial(mat);
     antenna->attach(antennaMesh);
   }
 
+
   gstate.activeScene->addEntity(minnow);
   gstate.activeScene->addEntity(groundplane);
   gstate.activeScene->addEntity(mamaCube);
-  gstate.activeScene->addEntity(cube2);
-  gstate.activeScene->addEntity(cube3);
   gstate.activeScene->addEntity(antenna);
 
   gstate.activeScene->addEntity(sun);
-  gstate.activeScene->addEntity(pointlight);
+
 }
 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
