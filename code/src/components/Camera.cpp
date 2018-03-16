@@ -19,7 +19,7 @@ void DynamicCamera::update(GLFWwindow* window, float dt) {
 		userForce += vec3(-INPUT_FORCE, 0.0f, 0.0f);
 	}
 	if (glfwGetKey(window, GLFW_KEY_R)) {
-		shake(3.0f, 5.0f);
+		shake(3.0f, 2.0f);
 	}
 	if (userForce != vec3(0.0)) {
 		userForce = normalize(userForce) * INPUT_FORCE;
