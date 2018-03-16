@@ -85,6 +85,8 @@ public:
 	//Returns the view matrix
 	glm::mat4 getView();
 
+	glm::vec3 getLocation();
+
 	//Returns the perspective matrix associated with the camera
 	glm::mat4 getPerspective(float aspect);
 
