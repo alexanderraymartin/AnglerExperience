@@ -22,7 +22,7 @@ protected:
 	glm::vec3 location;
 	Entity* (*newFish)(glm::vec3 location);
 	float cumTime = 0;
-	float timePerSpawn = 10.0f;
+	float timePerSpawn = 1.0f;
 };
 
 namespace SpawnSystem {

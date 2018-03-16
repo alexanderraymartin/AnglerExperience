@@ -45,6 +45,7 @@ using namespace std;
 #define FORCEWINDOW
 
 static SolidMesh* antennaMesh;
+static vector<Spawner*> spawners;
 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
         // Forward Declarations
@@ -92,7 +93,10 @@ int main(int argc, char** argv){
       // TODO: PlayerSystem::update(appstate, gstate, elapsedTime);
       // TODO: CameraSystem::update(appstate, gstate, elapsedTime);
 		camera->update(appstate.window, dt);
-		SpawnSystem::update(appstate, gstate, dt);
+		//SpawnSystem::update(appstate, gstate, dt);
+		for (Spawner* s : spawners) {
+			s->update(gstate, dt);
+		}
       // TODO: SwarmSystem::update(appstate, gstate, elapsedTime);
       // TODO: PhysicsSystem::update(appstate, gstate, elapsedTime);
       // TODO: ParticleSystem::update(appstate, gstate, elapsedTime); // Particle System System*
@@ -221,48 +225,15 @@ static void initShaders(ApplicationState &appstate){
     cout << "Loaded shader: " << it.key() << endl;
   }
 }
-//Some global variables because those are fun and good and stop us from loading the same asset every time an object is created
-static Material mat("" STRIFY(ASSET_DIR) "/simple-phong.mat");
-static vector<Geometry> minnowgeo;
-static vector<SolidMesh*> meshes;
-static vector<Geometry> cubegeo;
-
-static void setMinnowGeo() {
-	for (int i = 0; i < 19; i++) {
-		string num = i < 9 ? string("0") + to_string(i + 1) : to_string(i + 1);
-		Geometry::loadFullObj((string("" STRIFY(ASSET_DIR) "/minnow2/Minnow_0000")
-			+ num + string(".obj")).c_str(), minnowgeo);
-		SolidMesh* mesh = new SolidMesh(minnowgeo);
-		mesh->setMaterial(mat);
-		meshes.push_back(mesh);
-	}
-}
-
-static void setCubeGeo() {
-	Geometry::loadFullObj("" STRIFY(ASSET_DIR) "/cube.obj", cubegeo);
-}
-
-static Entity* createMinnow(vec3 location) {
-	Entity* minnow = new Entity();
-
-	//Try to do load calls only once, not every time create is called
-
-
-	Pose* pose = new Pose(location);
-	pose->scale = glm::vec3(1, 1, 1);
-	pose->orient = glm::angleAxis(glm::radians(90.0f), glm::vec3(0, 1, 0));
-	minnow->attach(new AnimatableMesh(new Animation(meshes, 0.066)));
-	minnow->attach(pose);
-	return minnow;
-}
 
 static Entity* createCube(vec3 location) {
 
 	Entity* cube;
-	
+	vector<Geometry> cubegeo;
+	//Try to do load calls only once, not every time create is called. May require more work to do this effictively
+	Geometry::loadFullObj("" STRIFY(ASSET_DIR) "/cube.obj", cubegeo);
 	cube = new Entity();
-	//Try to do load calls only once, not every time create is called
-
+	Material mat("" STRIFY(ASSET_DIR) "/simple-phong.mat");
 	SolidMesh* mesh = new SolidMesh(cubegeo);
 	mesh->setMaterial(mat);
 	location.x += (rand() % 100) / 10.0f - 5;
@@ -278,8 +249,6 @@ static Entity* createCube(vec3 location) {
 static void initScene(ApplicationState &appstate, GameState &gstate, Camera* camera){
   //StaticCamera* scenecam = new StaticCamera(37.5, glm::vec3(0.0, 3.4, 0.0), glm::vec3(0.0, 3.1, 3.0));
 	gstate.activeScene = new Scene(camera);
-	setCubeGeo();
-	setMinnowGeo();
   Entity* sun;
   {
     sun = new Entity();
@@ -301,7 +270,9 @@ static void initScene(ApplicationState &appstate, GameState &gstate, Camera* cam
   Entity* groundplane;
   {
     groundplane = new Entity();
-
+	Material mat("" STRIFY(ASSET_DIR) "/simple-phong.mat");
+	vector<Geometry> cubegeo;
+	Geometry::loadFullObj("" STRIFY(ASSET_DIR) "/cube.obj", cubegeo);
     SolidMesh* mesh = new SolidMesh(cubegeo);
     mesh->setMaterial(mat);
 
@@ -315,20 +286,42 @@ static void initScene(ApplicationState &appstate, GameState &gstate, Camera* cam
   vec3 cubeLoc = vec3(0, 3, 10);
   Entity* mamaCube = createCube(cubeLoc);
   {
-	  mamaCube->attach(new Spawner(cubeLoc, &createCube));
+	  Spawner* s = new Spawner(cubeLoc, &createCube);
+	  mamaCube->attach(s);
+	  spawners.push_back(s);
   }
 
 
   vec3 minnowLoc = vec3(0, 3, 5);
-  Entity* minnow = createMinnow(minnowLoc);
+  Entity* minnow;
   {
-	  minnow->attach(new Spawner(minnowLoc, &createMinnow));
+	  minnow = new Entity();
+
+	  vector<SolidMesh*> meshes;
+	  for (int i = 0; i < 19; i++) {
+		  vector<Geometry> minnowgeo;
+		  Material mat("" STRIFY(ASSET_DIR) "/simple-phong.mat");
+		  string num = i < 9 ? string("0") + to_string(i + 1) : to_string(i + 1);
+		  Geometry::loadFullObj((string("" STRIFY(ASSET_DIR) "/minnow2/Minnow_0000")
+			  + num + string(".obj")).c_str(), minnowgeo);
+		  SolidMesh* mesh = new SolidMesh(minnowgeo);
+		  mesh->setMaterial(mat);
+		  meshes.push_back(mesh);
+	  }
+
+	  Pose* pose = new Pose(minnowLoc);
+	  pose->scale = glm::vec3(1, 1, 1);
+	  pose->orient = glm::angleAxis(glm::radians(90.0f), glm::vec3(0, 1, 0));
+	  minnow->attach(new AnimatableMesh(new Animation(meshes, 0.066)));
+	  minnow->attach(pose);
   }
 
   Entity* cube2;
   {
     cube2 = new Entity();
-    
+	Material mat("" STRIFY(ASSET_DIR) "/simple-phong.mat");
+	vector<Geometry> cubegeo;
+	Geometry::loadFullObj("" STRIFY(ASSET_DIR) "/cube.obj", cubegeo);
     SolidMesh* mesh = new SolidMesh(cubegeo);
     mesh->setMaterial(mat);
     
@@ -342,7 +335,9 @@ static void initScene(ApplicationState &appstate, GameState &gstate, Camera* cam
   Entity* cube3;
   {
     cube3 = new Entity();
-    
+	Material mat("" STRIFY(ASSET_DIR) "/simple-phong.mat");
+	vector<Geometry> cubegeo;
+	Geometry::loadFullObj("" STRIFY(ASSET_DIR) "/cube.obj", cubegeo);
     SolidMesh* mesh = new SolidMesh(cubegeo);
     mesh->setMaterial(mat);
     
@@ -356,7 +351,7 @@ static void initScene(ApplicationState &appstate, GameState &gstate, Camera* cam
   Entity* antenna;
   {
     antenna = new Entity();
-
+	Material mat("" STRIFY(ASSET_DIR) "/simple-phong.mat");
     vector<Geometry> antennaGeo = vector<Geometry>();
     antennaMesh = new SolidMesh(antennaGeo);
     antennaMesh->setMaterial(mat);
