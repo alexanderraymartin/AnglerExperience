@@ -43,7 +43,7 @@
 
 using namespace std;
 
-// #define FORCEWINDOW
+#define FORCEWINDOW
 
 static SolidMesh* antennaMesh;
 static vector<Spawner*> spawners;
@@ -91,20 +91,21 @@ int main(int argc, char** argv){
     double fxdt = gstate.fxAnimTime.elapsed();
     double gdt = gstate.gameTime.elapsed();
     // TODO: Appropriate timestep loop structure
-    {
-      // TODO: PlayerSystem::update(appstate, gstate, elapsedTime);
-      // TODO: CameraSystem::update(appstate, gstate, elapsedTime);
-		camera->update(appstate.window, fxdt);
-		//SpawnSystem::update(appstate, gstate, dt);
-		for (Spawner* s : spawners) {
-			s->update(gstate, gdt);
-		}
-      // TODO: SwarmSystem::update(appstate, gstate, elapsedTime);
-      // TODO: PhysicsSystem::update(appstate, gstate, elapsedTime);
-      // TODO: ParticleSystem::update(appstate, gstate, elapsedTime); // Particle System System*
-      GameplaySystem::update(appstate, gstate, gdt);
-      AnimationSystem::update(appstate, gstate, fxdt);
-    }
+    // TODO: PlayerSystem::update(appstate, gstate, elapsedTime);
+	camera->update(appstate.window, fxdt);
+	//SpawnSystem::update(appstate, gstate, dt);
+	for (Spawner* s : spawners) {
+		s->update(gstate, fxdt);
+	}
+    // TODO: SwarmSystem::update(appstate, gstate, elapsedTime);
+    // TODO: PhysicsSystem::update(appstate, gstate, elapsedTime);
+    // TODO: ParticleSystem::update(appstate, gstate, elapsedTime); // Particle System System*
+    GameplaySystem::update(appstate, gstate, gdt);
+    //AnimationSystem::update(appstate, gstate, fxdt);
+
+
+	//An FPS Counter so we can see how things are going
+	cout << "FPS: " << 1 / fxdt << "\n";
 
     // Rendering happens here. This 'RenderSystem' will end up containing a lot and effectively
     // utilize many self-contained subsystems (semantically not real systems) which do individual
@@ -183,10 +184,10 @@ static void initGLFW(ApplicationState &appstate){
   glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
   // Later this should only run if settings are not already loaded from a save/config
-  UINT w_width = 854;
-  UINT w_height = 480;
+  UINT w_width = 1280;
+  UINT w_height = 720;
 
-  GLFWmonitor* monitor = autoDetectScreen(&w_width, &w_height);
+  GLFWmonitor* monitor;// = autoDetectScreen(&w_width, &w_height);
 
 #ifdef FORCEWINDOW
   monitor = NULL;

@@ -276,7 +276,9 @@ static void drawGeometry(const Geometry &geomcomp, const Geometry *geomcomp2,
   glUniformMatrix4fv(shader->getUniform("M"), 1, GL_FALSE, value_ptr(MVP.M.topMatrix()));
   glUniformMatrix4fv(shader->getUniform("V"), 1, GL_FALSE, value_ptr(MVP.V.topMatrix()));
   glUniformMatrix4fv(shader->getUniform("P"), 1, GL_FALSE, value_ptr(MVP.P.topMatrix()));
-  glUniform1f(shader->getUniform("interp"), interp);
+  if (geomcomp2 != nullptr) {
+	  glUniform1f(shader->getUniform("interp"), interp);
+  }
 
   glBindVertexArray(geomcomp.vaoID);
   // Bind position buffer
