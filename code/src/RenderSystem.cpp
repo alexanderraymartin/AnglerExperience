@@ -17,7 +17,7 @@
         // Forward Declarations
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
-static void prepareDeferred(GLuint gbuffer);
+static void prepareBuffer(GLuint gbuffer);
 static void initDeferredBuffers(int width, int height, RenderSystem::Buffers &buffers);
 static void initOutputFBO(GLuint* render_out_FBO, GLuint* render_out_color, int w_width, int w_height, GLenum filter);
 static void bindGBuf(RenderSystem::Buffers &buffers, Program* shader);
@@ -74,55 +74,44 @@ void RenderSystem::geometryPass(GameState &gstate) {
 
   setMVP(camera);
 
-  prepareDeferred(deferred_buffers.gBuffer);
+  prepareBuffer(deferred_buffers.gBuffer);
   drawGroundPlane(gstate, seafloor_deform);
   drawEntities(gstate.activeScene, deferred_export);
 }
 
-void RenderSystem::render(ApplicationState &appstate, GameState &gstate, double elapsedTime){
-  
-  geometryPass(gstate);
-
-  updateLighting(gstate.activeScene);
-  updateDepthUniforms();
-
-  prepareDeferred(shadowFramebuffer);
-  drawEntities(gstate.activeScene, deferred_shadow);
-
-  updateShadowMap();
-  updateCaustic(elapsedTime, 24.0);
-  applyShading(gstate.activeScene, *shaderlib);
-
-  PostProcessor::doPostProcessing(render_out_color, deferred_buffers.depthBuffer);
+void RenderSystem::setShadowMap(GameState &gstate) {
+	//May need to be broken up
+	updateDepthUniforms();
+	prepareBuffer(shadowFramebuffer);
+	drawEntities(gstate.activeScene, deferred_shadow);
+	updateShadowMap();
 
 }
 
+void RenderSystem::lightingPass(ApplicationState &appstate, GameState &gstate, double elapsedTime) {
+	//Needs to be changed
+	updateLighting(gstate.activeScene);
+	setShadowMap(gstate);
+	updateCaustic(elapsedTime, 24.0);
+	applyShading(gstate.activeScene, *shaderlib);
+}
+
+void RenderSystem::render(ApplicationState &appstate, GameState &gstate, double elapsedTime){
+  geometryPass(gstate);
+
+  lightingPass(appstate, gstate, elapsedTime);
+
+  PostProcessor::doPostProcessing(render_out_color, deferred_buffers.depthBuffer);
+}
+
 // This function is aweful and I hate it.
-void RenderSystem::updateLighting(Scene* scene){
-  const static char* colbase = "pointLights.colors[%u]";
-  const static char* locbase = "pointLights.positions[%u]";
-  size_t baselen[2] = {strlen(colbase)+9, strlen(locbase)+9};
-  static char* colid = NULL; 
-  colid = (colid == NULL) ? new char[baselen[0]+1] : colid;
-  static char* locid = NULL; 
-  locid = (locid == NULL) ? new char[baselen[1]+1] : locid;
-
-  UINT lightnum = 0;
-
+void RenderSystem::updateLighting(const vector<PointLight> &lights){
   shaderlib->fastActivate(deferred_uber);
-  for(pair<const Entity*, Entity*> entpair : scene->entities){
-    SunLight* suncomp = NULL;
-    PointLight* ptcomp = NULL;
-    Pose* pose = NULL;
+
     // Locations for point lights so we only fetch once
     for(Component *cmpnt : entpair.second->components){
-      GATHER_SINGLE_COMPONENT(pose, Pose*, cmpnt);
-      GATHER_SINGLE_COMPONENT(ptcomp, PointLight*, cmpnt);
       // fprintf(stderr, "%p and %p\n", suncomp, pose);
-      if(CATCH_COMPONENT(suncomp, SunLight*, cmpnt)){
         SunLight* sun = static_cast<SunLight*>(cmpnt);
-        glUniform3fv(deferred_uber->getUniform("sunCol"), 1, value_ptr(sun->color));
-        glUniform3fv(deferred_uber->getUniform("sunDir"), 1, value_ptr(sun->direction));
 
         depthSet.lightView.loadIdentity();
         depthSet.lightView.lookAt(vec3(0.0, 10, 0.0), vec3(0.0, 10, 0.0) + sun->direction, vec3(0,1,0));
@@ -130,18 +119,9 @@ void RenderSystem::updateLighting(Scene* scene){
         depthSet.causticView.loadIdentity();
         depthSet.causticView.lookAt(sun->location, sun->location + sun->direction, vec3(0,1,0));
 
-      }else if(ptcomp && pose){
-        // This would be a great place to implement DOD
-        snprintf(colid, baselen[0], colbase, lightnum);
-        snprintf(locid, baselen[1], locbase, lightnum);
-        lightnum++;
-        glUniform3fv(deferred_uber->getUniform(colid), 1, value_ptr(ptcomp->color));
-        glUniform3fv(deferred_uber->getUniform(locid), 1, value_ptr(pose->loc));
-        pose = NULL;
-      }
+      
     }
-    glUniform1i(deferred_uber->getUniform("numLights"), lightnum);
-  }
+  
 }
 
 void RenderSystem::applyShading(Scene* scene, ShaderLibrary &shaderlib){
@@ -361,7 +341,7 @@ static void drawGeometry(const Geometry &geomcomp, const Geometry *geomcomp2,
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
 
-static void prepareDeferred(GLuint gbuffer){
+static void prepareBuffer(GLuint gbuffer){
   glBindFramebuffer(GL_FRAMEBUFFER, gbuffer);
   glClearColor(0.0, 0.0, 0.0, 1.0);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

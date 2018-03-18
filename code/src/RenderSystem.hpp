@@ -16,6 +16,7 @@
 #include "Scene.hpp"
 #include "Entity.hpp"
 #include "Component.hpp"
+#include "Lights.h"
 
 #include "utility/Texture.h"
 
@@ -69,8 +70,8 @@ namespace RenderSystem{
   void init(ApplicationState &appstate);
 
   void render(ApplicationState &appstate, GameState &gstate, double elapsedTime);
-
-  void updateLighting(Scene* scene);
+  
+  void updateLighting(const vector<PointLight> &lights);
 
   void setMVP(Camera* camera);
 
@@ -89,6 +90,10 @@ namespace RenderSystem{
   void initDepthUniforms(double causticOrtho, double shadowOrtho);
 
   void updateDepthUniforms();
+
+  void setShadowMap(GameState &gstate);
+
+  void lightingPass(ApplicationState &appstate, GameState &gstate, double elapsedTime);
 
   void initCaustics();
 
