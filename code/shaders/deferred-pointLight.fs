@@ -21,7 +21,7 @@ uniform vec3 viewPos;
 uniform float levelProgress;
 
 void main()
-{             
+{
 	vec2 TexCoords = gl_FragCoord.xy / vec2(textureSize(gPosition, 0));
   // retrieve data from G-buffer
   vec3 FragPos = texture(gPosition, TexCoords).rgb;
@@ -29,8 +29,6 @@ void main()
   vec3 Albedo = texture(gAlbedo, TexCoords).rgb;
   vec3 SpecColor = texture(gSpecular, TexCoords).rgb;
   float shine = texture(gSpecular, TexCoords).a;
-
-  float BackMask = 1.0 - step(EPS, length(Normal));
   
   vec3 viewDir = normalize(viewPos - FragPos);
 
@@ -43,14 +41,6 @@ void main()
   vec3 specular = max(SpecColor*color*pow(dot(Normal, H), shine)*facingmask, 0.0);
 
   vec3 lighting = (diffuse + specular) * attenuation;
-/*
-  // exponential fog
-  float fogDensity = .051;
-  float linearDepth = FragPos.z-4;
-  float fog = 1.0 - clamp(exp(-fogDensity*linearDepth), 0.0, 1.0); 
-  vec3 fogColor = vec3(0.2, 0.2, 0.3);
-  lighting = mix (lighting, fogColor, fog + BackMask);
-*/
-  //FragColor = vec4(1.0);
+
   FragColor = vec4(lighting, 1.0);
 }

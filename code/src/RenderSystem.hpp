@@ -30,9 +30,11 @@ namespace RenderSystem{
   static Program* deferred_export = nullptr;
   static Program* deferred_uber = nullptr;
   static Program* pointLightProg = nullptr;
+  static Program* sunLightProg = nullptr;
   static Program* deferred_shadow = nullptr;
   static Program* seafloor_deform = nullptr;
   static Geometry sphereGeom = Geometry("" STRIFY(ASSET_DIR) "/sphere.obj");
+  static Geometry quadGeom = Geometry("" STRIFY(ASSET_DIR) "/quad.obj");
 
   static ShaderLibrary* shaderlib = nullptr;
   
@@ -75,11 +77,18 @@ namespace RenderSystem{
   
   void updateLighting(Scene* scene);
 
+  void updatePointLights(Scene* scene);
+
+  void updateSunLights(Scene* scene);
+
+
   void lightingPassSetGLState(GLuint framebuffer);
 
   void lightingPassResetGLState();
 
-  void bindLight(PointLight* pointLight);
+  void bindPointLight(PointLight* pointLight);
+
+  void bindSunLight(SunLight* pointLight);
 
   void bindCamera(Scene* scene, Program* prog);
 
@@ -87,9 +96,15 @@ namespace RenderSystem{
 
   std::vector<PointLight*>* gatherPointLights(Scene* scene);
 
+  std::vector<SunLight*>* gatherSunLights(Scene* scene);
+
   void drawPointLights(const vector<PointLight*> &pointLights);
 
   void drawPointLight(PointLight* pointLight);
+
+  void drawSunLights(const vector<SunLight*> &sunLights);
+
+  void drawSunLight(SunLight* pointLight);
 
   void setMVP(Camera* camera);
 

@@ -24,6 +24,7 @@ static void setGBufAttachment(RenderSystem::Buffers &buffers);
 static void setGBufDepth(int width, int height, RenderSystem::Buffers &buffers);
 
 static void drawLight(const Geometry &geomcomp, RenderSystem::MVPset &MVP, Program* shader);
+static void drawSunLight(const Geometry &geomcomp, RenderSystem::MVPset &MVP, Program* shader);
 static void drawGeometry(const Geometry &geomcomp, RenderSystem::MVPset &MVP, Program* shader);
 static void drawGeometry(const Geometry &geomcomp, const Geometry *geomcomp2, 
   RenderSystem::MVPset &MVP, Program* shader, double interp);
@@ -41,11 +42,13 @@ void RenderSystem::init(ApplicationState &appstate){
   deferred_export = shaderlib->getPtr("deferred-export");
   deferred_uber = shaderlib->getPtr("deferred-uber");
   pointLightProg = shaderlib->getPtr("deferred-pointLight");
+  sunLightProg = shaderlib->getPtr("deferred-sunLight");
   deferred_shadow = shaderlib->getPtr("deferred-shadow");
   deferred_shadow->setVerbose(false);
   seafloor_deform = shaderlib->getPtr("seafloor-deform");
 
   sphereGeom.init();
+  quadGeom.init();
 
   glEnable(GL_DEPTH_TEST);
   glDisable(GL_BLEND);
@@ -127,25 +130,62 @@ vector<PointLight*>* RenderSystem::gatherPointLights(Scene* scene) {
 	return pointLights;
 }
 
-void RenderSystem::updateLighting(Scene* scene){
-	ASSERT_NO_GLERR();
+//This can be optimized, either by caching it or building the list a more efficent way
+vector<SunLight*>* RenderSystem::gatherSunLights(Scene* scene) {
+	vector<SunLight*>* lights = new vector<SunLight*>();
+	for (pair<const Entity*, Entity*> entpair : scene->entities) {
+		SunLight* light = nullptr;
+		for (Component *cmpnt : entpair.second->components) {
+			GATHER_SINGLE_COMPONENT(light, SunLight*, cmpnt);
+			if (light) {
+				lights->push_back(light);
+			}
+		}
+	}
+	return lights;
+}
+
+void RenderSystem::updatePointLights(Scene* scene) {
 	vector<PointLight*>* pointLights = gatherPointLights(scene);
-	ASSERT_NO_GLERR();
 	bindBuffers(deferred_buffers, pointLightProg);
-	ASSERT_NO_GLERR();
 	bindCamera(scene, pointLightProg);
-	ASSERT_NO_GLERR();
 	drawPointLights(*pointLights);
 	//not sure if this is needed
 	free(pointLights);
+}
 
-	/*
+void RenderSystem::updateSunLights(Scene* scene) {
 	vector<SunLight*>* sunLights = gatherSunLights(scene);
 	bindBuffers(deferred_buffers, sunLightProg);
 	bindCamera(scene, sunLightProg);
 	drawSunLights(*sunLights);
 	//not sure if this is needed
-	free(sunLights);*/
+	free(sunLights);
+
+}
+
+void RenderSystem::updateLighting(Scene* scene){
+	updateSunLights(scene);
+	updatePointLights(scene);
+}
+
+void RenderSystem::drawSunLights(const vector<SunLight*> &lights) {
+	for (SunLight* light : lights) {
+		drawSunLight(light);
+	}
+}
+
+void RenderSystem::bindSunLight(SunLight* sunLight) {
+	vec3 dir = sunLight->getDirection();
+	vec3 color = sunLight->getColor();
+	glUniform3f(sunLightProg->getUniform("lightDir"), dir.x, dir.y, dir.z);
+	glUniform3f(sunLightProg->getUniform("color"), color.x, color.y, color.z);
+}
+
+void RenderSystem::drawSunLight(SunLight* sunLight) {
+	shaderlib->fastActivate(sunLightProg);
+	bindSunLight(sunLight);
+	drawSunLight(quadGeom, MVP, sunLightProg);
 }
 
 void RenderSystem::drawPointLights(const vector<PointLight*> &pointLights) {
@@ -154,7 +194,7 @@ void RenderSystem::drawPointLights(const vector<PointLight*> &pointLights) {
 	}
 }
 
-void RenderSystem::bindLight(PointLight* pointLight) {
+void RenderSystem::bindPointLight(PointLight* pointLight) {
 	vec3 pos = pointLight->getPosition();
 	vec3 color = pointLight->getColor();
 	glUniform3f(pointLightProg->getUniform("lightPos"), pos.x, pos.y, pos.z);
@@ -163,7 +203,7 @@ void RenderSystem::bindLight(PointLight* pointLight) {
 
 void RenderSystem::drawPointLight(PointLight* pointLight) {
 	shaderlib->fastActivate(pointLightProg);
-	bindLight(pointLight);
+	bindPointLight(pointLight);
 	MVP.M.pushMatrix();
 	MVP.M.translate(pointLight->getPosition());
 	MVP.M.scale(pointLight->getRadius());
@@ -301,13 +341,37 @@ void RenderSystem::onResize(GLFWwindow *window, int width, int height){
 // It may be possible to move some parts of this into one or more libraries. 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
+static void drawSunLight(const Geometry &geomcomp, RenderSystem::MVPset &MVP, Program* shader) {
+	int h_pos, h_nor, h_tex;
+	int h_pos2, h_nor2, h_tex2;
+	h_pos = h_nor = h_tex = -1;
+	h_pos2 = h_nor2 = h_tex2 = -1;
+
+	glBindVertexArray(geomcomp.vaoID);
+	// Bind position buffer
+	h_pos = shader->getAttribute("vertPos");
+	GLSL::enableVertexAttribArray(h_pos);
+	glBindBuffer(GL_ARRAY_BUFFER, geomcomp.posBufID);
+	glVertexAttribPointer(h_pos, 3, GL_FLOAT, GL_FALSE, 0, (const void *)0);
+
+	// Bind element buffer
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, geomcomp.eleBufID);
+	// Draw
+	glDrawElements(GL_TRIANGLES, (int)geomcomp.eleBuf->size(), GL_UNSIGNED_INT, (const void *)0);
+
+	GLSL::disableVertexAttribArray(h_pos);
+
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+}
+
 static void drawLight(const Geometry &geomcomp, RenderSystem::MVPset &MVP, Program* shader) {
 	int h_pos, h_nor, h_tex;
 	int h_pos2, h_nor2, h_tex2;
 	h_pos = h_nor = h_tex = -1;
 	h_pos2 = h_nor2 = h_tex2 = -1;
 
-	geomcomp.material.apply(shader);
 	glUniformMatrix4fv(shader->getUniform("M"), 1, GL_FALSE, value_ptr(MVP.M.topMatrix()));
 	glUniformMatrix4fv(shader->getUniform("V"), 1, GL_FALSE, value_ptr(MVP.V.topMatrix()));
 	glUniformMatrix4fv(shader->getUniform("P"), 1, GL_FALSE, value_ptr(MVP.P.topMatrix()));
