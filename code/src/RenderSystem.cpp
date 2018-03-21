@@ -623,12 +623,12 @@ void RenderSystem::updateDepthUniforms() {
   mat4 shadowMatrix = depthSet.bias.topMatrix() * depthSet.shadowOrtho.topMatrix() * depthSet.lightView.topMatrix();
   mat4 depthMatrix = depthSet.shadowOrtho.topMatrix() * depthSet.lightView.topMatrix();
 
-  deferred_uber->bind();
+  sunLightProg->bind();
 
-  glUniformMatrix4fv(deferred_uber->getUniform("causticMatrix"), 1, GL_FALSE, value_ptr(causticMatrix));
-  glUniformMatrix4fv(deferred_uber->getUniform("shadowMatrix"), 1, GL_FALSE, value_ptr(shadowMatrix));
+  glUniformMatrix4fv(sunLightProg->getUniform("causticMatrix"), 1, GL_FALSE, value_ptr(causticMatrix));
+  glUniformMatrix4fv(sunLightProg->getUniform("shadowMatrix"), 1, GL_FALSE, value_ptr(shadowMatrix));
 
-  deferred_uber->unbind();
+  sunLightProg->unbind();
 
   deferred_shadow->bind();
 
@@ -638,14 +638,14 @@ void RenderSystem::updateDepthUniforms() {
 }
 
 void RenderSystem::updateCaustic(double elapsedTime, double speedMod) {
-  deferred_uber->bind();
+	sunLightProg->bind();
 
-  caustics[(int)currCaustic]->bind(deferred_uber->getUniform("caustic"));
+  caustics[(int)currCaustic]->bind(sunLightProg->getUniform("caustic"));
 
   currCaustic += (elapsedTime* speedMod);
   currCaustic = currCaustic >= CAUSTIC_COUNT ? 0 : currCaustic;
 
-  deferred_uber->unbind();
+  sunLightProg->unbind();
 }
 
 void RenderSystem::initShadowMap(int width, int height) {

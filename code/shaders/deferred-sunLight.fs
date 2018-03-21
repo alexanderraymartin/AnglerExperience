@@ -44,7 +44,7 @@ void main()
   //vec3 lighting = Albedo * Ambient; // hard-coded ambient component
 
   vec3 lighting = max(Albedo*color*dot(Normal, sunVec),0.0) + max(SpecColor*color*pow(dot(Normal, H),shine)*step(0.0, dot(sunVec, Normal)), 0.0);
-/*
+
 
   vec4 shadowCoord = shadowMatrix * texture(gPosition, TexCoords);
   vec4 causticCoord = causticMatrix * texture(gPosition, TexCoords);
@@ -61,7 +61,7 @@ void main()
   lighting = mix(lighting, lighting*caustColor.rgb, caustColor.a*.8) * INV(BackMask);
 
   lighting = mix(lighting, BACKGROUND, BackMask) * visibility;
-*/
+
     // exponential fog
     float fogDensity = .051;
     float linearDepth = FragPos.z-4;
