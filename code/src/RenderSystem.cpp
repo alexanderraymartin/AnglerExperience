@@ -674,11 +674,11 @@ void RenderSystem::initShadowMap(int width, int height) {
 }
 
 void RenderSystem::updateShadowMap() {
-  deferred_uber->bind();
+	sunLightProg->bind();
 
   glActiveTexture(GL_TEXTURE0 + (deferred_buffers.buffers.size() + CAUSTIC_COUNT));
   glBindTexture(GL_TEXTURE_2D, shadowTexture);
-  glUniform1i(deferred_uber->getUniform("shadowMap"), (deferred_buffers.buffers.size() + CAUSTIC_COUNT));
+  glUniform1i(sunLightProg->getUniform("shadowMap"), (deferred_buffers.buffers.size() + CAUSTIC_COUNT));
 
-  deferred_uber->unbind();
+  sunLightProg->unbind();
 }
