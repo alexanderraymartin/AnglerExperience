@@ -10,6 +10,7 @@ public:
 	const glm::vec3 getPosition() { return position; }
 	const glm::vec3 getColor() { return color; }
 	const float getRadius() { return radius; }
+	void setPosition(glm::vec3 pos) { position = pos; }
 
 protected:
 	glm::vec3 position;

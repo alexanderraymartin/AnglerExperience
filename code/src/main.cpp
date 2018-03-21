@@ -49,6 +49,7 @@ static SolidMesh* antennaMesh;
 static vector<Spawner*> spawners;
 static default_random_engine generator;
 static uniform_real_distribution<float> distribution(0,1);
+static PointLight* anglerLight;
 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
         // Forward Declarations
@@ -120,6 +121,8 @@ int main(int argc, char** argv){
 
     Geometry* geo = antennaGen->generateAntenna(vec3(-0.5f, 3.0f, 2.0f), mousePos);
     antennaMesh->geometries = {*geo};
+	//not working, not sure why
+	anglerLight->setPosition(mousePos);
 
     RenderSystem::render(appstate, gstate, fxdt);
 
@@ -317,10 +320,37 @@ static void initScene(ApplicationState &appstate, GameState &gstate, Camera* cam
 	  spawners.push_back(s);
   }
 
+  Entity* angler = new Entity();
+  {
+	  angler = new Entity();
+
+	  vector<SolidMesh*> meshes;
+	  for (int i = 0; i < 19; i++) {
+		  vector<Geometry> minnowgeo;
+		  Material mat("" STRIFY(ASSET_DIR) "/simple-phong.mat");
+		  string num = i < 9 ? string("0") + to_string(i + 1) : to_string(i + 1);
+		  Geometry::loadFullObj((string("" STRIFY(ASSET_DIR) "/minnow2/Minnow_0000")
+			  + num + string(".obj")).c_str(), minnowgeo);
+		  SolidMesh* mesh = new SolidMesh(minnowgeo);
+		  mesh->setMaterial(mat);
+		  meshes.push_back(mesh);
+	  }
+
+	  vec3 location = vec3(0, 3, 5);
+	  Pose* pose = new Pose(location);
+	  pose->scale = glm::vec3(1, 1, 1);
+	  pose->orient = glm::angleAxis(glm::radians(90.0f), glm::vec3(0, 1, 0));
+
+	  angler->attach(pose);
+	  angler->attach(new AnimatableMesh(new Animation(meshes, 0.066)));
+	  vec3 color = vec3(1.0, 0.5, 0.2);
+	  anglerLight = new PointLight(location, color);
+  }
+
 
   vec3 minnowLoc = vec3(0, 3, 5);
-  Entity* minnow;
-  {
+ // Entity* minnow;
+ /* {
 	  minnow = new Entity();
 
 	  vector<SolidMesh*> meshes;
@@ -344,7 +374,7 @@ static void initScene(ApplicationState &appstate, GameState &gstate, Camera* cam
 	  minnowLoc += vec3(distribution(generator), distribution(generator), distribution(generator)) * vec3(20.0f) - vec3(10.0f);
 	  PointLight* pointLight = new PointLight(minnowLoc, color);
 	  minnow->attach(pointLight);
-  }
+  }*/
 
 
   Entity* antenna;
@@ -361,7 +391,7 @@ static void initScene(ApplicationState &appstate, GameState &gstate, Camera* cam
 
 
   gstate.activeScene->addEntity(lightSpawner);
-  gstate.activeScene->addEntity(minnow);
+  gstate.activeScene->addEntity(angler);
   gstate.activeScene->addEntity(groundplane);
   gstate.activeScene->addEntity(mamaCube);
   gstate.activeScene->addEntity(antenna);

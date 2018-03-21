@@ -151,7 +151,7 @@ void RenderSystem::updatePointLights(Scene* scene) {
 	bindCamera(scene, pointLightProg);
 	drawPointLights(*pointLights);
 	//not sure if this is needed
-	free(pointLights);
+	delete pointLights;
 }
 
 void RenderSystem::updateSunLights(Scene* scene) {
@@ -160,7 +160,7 @@ void RenderSystem::updateSunLights(Scene* scene) {
 	bindCamera(scene, sunLightProg);
 	drawSunLights(*sunLights);
 	//not sure if this is needed
-	free(sunLights);
+	delete sunLights;
 
 }
 
