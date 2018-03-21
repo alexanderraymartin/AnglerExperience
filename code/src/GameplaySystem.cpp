@@ -22,9 +22,9 @@ using namespace std;
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 void GameplaySystem::update(ApplicationState &appstate, GameState &gstate, double elapsedTime){
-  gstate.levelProgress = gstate.gameTime.get() * 1.0/3.0;
+  gstate.levelProgress = gstate.gameTime.get() * 1.0/30.0;
 
- /* Entity* sun = gstate.activeScene->getFirstWithComponent<SunLight>();
+  Entity* sun = gstate.activeScene->getFirstWithComponent<SunLight>();
   SunLight* suncmpnt = sun->getFirstComponentType<SunLight>();
-  suncmpnt->setDirection(vec3(0.0, 10.0, 0.0) + -gstate.levelDirection*static_cast<float>(gstate.levelProgress));*/
+  suncmpnt->setDirection(vec3(0.0, -1.0, 0.0) + -gstate.levelDirection*static_cast<float>(gstate.levelProgress));
 }

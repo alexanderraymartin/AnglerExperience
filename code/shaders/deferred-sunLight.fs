@@ -30,14 +30,14 @@ void main()
 	vec2 TexCoords = gl_FragCoord.xy / vec2(textureSize(gPosition, 0));
   // retrieve data from G-buffer
   vec3 FragPos = texture(gPosition, TexCoords).rgb;
-  vec3 Normal = texture(gNormal, TexCoords).rgb;
+  vec3 Normal = normalize(texture(gNormal, TexCoords).rgb);
   vec3 Albedo = texture(gAlbedo, TexCoords).rgb;
   float Ambient = texture(gAlbedo, TexCoords).a;
   vec3 SpecColor = texture(gSpecular, TexCoords).rgb;
   float shine = texture(gSpecular, TexCoords).a;
 
   float BackMask = 1.0 - step(EPS, length(Normal));
-  vec3 sunVec = -lightDir;
+  vec3 sunVec = -normalize(lightDir);
   
   vec3 viewDir = normalize(viewPos - FragPos);
   vec3 H = normalize(sunVec+viewDir);

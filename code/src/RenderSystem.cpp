@@ -57,7 +57,7 @@ void RenderSystem::init(ApplicationState &appstate){
 
   initOutputFBO(&render_out_FBO, &render_out_color, w_width, w_height, GL_LINEAR);
 
-  initDepthUniforms(1, 10);
+  initDepthUniforms(.5, 10);
   initCaustics();
   initShadowMap(w_width, w_height);
 
@@ -151,7 +151,7 @@ void RenderSystem::updatePointLights(Scene* scene) {
 	bindCamera(scene, pointLightProg);
 	drawPointLights(*pointLights);
 	//not sure if this is needed
-	free(pointLights);
+	delete pointLights;
 }
 
 void RenderSystem::updateSunLights(Scene* scene) {
@@ -160,7 +160,7 @@ void RenderSystem::updateSunLights(Scene* scene) {
 	bindCamera(scene, sunLightProg);
 	drawSunLights(*sunLights);
 	//not sure if this is needed
-	free(sunLights);
+	delete sunLights;
 
 }
 
