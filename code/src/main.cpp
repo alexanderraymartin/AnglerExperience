@@ -5,6 +5,7 @@
 #include <limits>
 #define _USE_MATH_DEFINES
 #include <cmath>
+#include <random>
 
 #define GLEW_STATIC
 #include <GL/glew.h>
@@ -29,7 +30,6 @@
 #include "components/Geometry.hpp"
 #include "SimpleComponents.hpp"
 #include "AnimationComponents.hpp"
-#include "LightingComponents.hpp"
 #include "Material.hpp"
 #include "Camera.h"
 #include "Spawner.h"
@@ -43,10 +43,12 @@
 
 using namespace std;
 
-// #define FORCEWINDOW
+#define FORCEWINDOW
 
 static SolidMesh* antennaMesh;
 static vector<Spawner*> spawners;
+static default_random_engine generator;
+static uniform_real_distribution<float> distribution(0,1);
 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
         // Forward Declarations
@@ -91,20 +93,21 @@ int main(int argc, char** argv){
     double fxdt = gstate.fxAnimTime.elapsed();
     double gdt = gstate.gameTime.elapsed();
     // TODO: Appropriate timestep loop structure
-    {
-      // TODO: PlayerSystem::update(appstate, gstate, elapsedTime);
-      // TODO: CameraSystem::update(appstate, gstate, elapsedTime);
-		camera->update(appstate.window, fxdt);
-		//SpawnSystem::update(appstate, gstate, dt);
-		for (Spawner* s : spawners) {
-			s->update(gstate, gdt);
-		}
-      // TODO: SwarmSystem::update(appstate, gstate, elapsedTime);
-      // TODO: PhysicsSystem::update(appstate, gstate, elapsedTime);
-      // TODO: ParticleSystem::update(appstate, gstate, elapsedTime); // Particle System System*
-      GameplaySystem::update(appstate, gstate, gdt);
-      AnimationSystem::update(appstate, gstate, fxdt);
-    }
+    // TODO: PlayerSystem::update(appstate, gstate, elapsedTime);
+	camera->update(appstate.window, fxdt);
+	//SpawnSystem::update(appstate, gstate, dt);
+	for (Spawner* s : spawners) {
+		s->update(gstate, fxdt);
+	}
+    // TODO: SwarmSystem::update(appstate, gstate, elapsedTime);
+    // TODO: PhysicsSystem::update(appstate, gstate, elapsedTime);
+    // TODO: ParticleSystem::update(appstate, gstate, elapsedTime); // Particle System System*
+    GameplaySystem::update(appstate, gstate, gdt);
+    //AnimationSystem::update(appstate, gstate, fxdt);
+
+
+	//An FPS Counter so we can see how things are going
+	cout << "FPS: " << 1 / fxdt << "\n";
 
     // Rendering happens here. This 'RenderSystem' will end up containing a lot and effectively
     // utilize many self-contained subsystems (semantically not real systems) which do individual
@@ -183,10 +186,10 @@ static void initGLFW(ApplicationState &appstate){
   glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
   // Later this should only run if settings are not already loaded from a save/config
-  UINT w_width = 854;
-  UINT w_height = 480;
+  UINT w_width = 1280;
+  UINT w_height = 720;
 
-  GLFWmonitor* monitor = autoDetectScreen(&w_width, &w_height);
+  GLFWmonitor* monitor;// = autoDetectScreen(&w_width, &w_height);
 
 #ifdef FORCEWINDOW
   monitor = NULL;
@@ -244,14 +247,27 @@ static Entity* createCube(vec3 location) {
 	Material mat("" STRIFY(ASSET_DIR) "/simple-phong.mat");
 	SolidMesh* mesh = new SolidMesh(cubegeo);
 	mesh->setMaterial(mat);
-	location.x += (rand() % 100) / 10.0f - 5;
+	location.x += distribution(generator)*10-5;
 	Pose* pose = new Pose(location);
 	pose->scale = glm::vec3(0.1, 0.1, 0.1);
 	pose->orient = glm::angleAxis(glm::radians(45.0f), glm::vec3(0, 1, 0));
 	cube->attach(mesh);
 	cube->attach(pose);
+	vec3 color = vec3(distribution(generator), distribution(generator), distribution(generator))/vec3(5.0f);
+	PointLight* pointLight = new PointLight(location, color);
+	cube->attach(pointLight);
 	
 	return cube;
+}
+
+static Entity* createPointLightEntity(vec3 location) {
+	Entity* light = new Entity();
+	vec3 color = vec3(distribution(generator), distribution(generator), distribution(generator));
+	location += vec3(distribution(generator), 0, distribution(generator)) * vec3(10.0f) - vec3(5.0f);
+	PointLight* pointLight = new PointLight(location, color);
+	light->attach(pointLight);
+
+	return light;
 }
 
 static void initScene(ApplicationState &appstate, GameState &gstate, Camera* camera){
@@ -262,9 +278,8 @@ static void initScene(ApplicationState &appstate, GameState &gstate, Camera* cam
   {
     sun = new Entity();
     sun->attach(new SunLight(
-      glm::vec3(.7, .7, .67),
-      glm::vec3(0.5, -1.0, 1.0),
-      glm::vec3(0.0, 10.0, 0.0))
+      glm::vec3(.2, .2, .19),
+      glm::vec3(0.5, -1.0, 1.0))
     );
   }
   gstate.activeScene->addEntity(sun);
@@ -295,6 +310,13 @@ static void initScene(ApplicationState &appstate, GameState &gstate, Camera* cam
 	  spawners.push_back(s);
   }
 
+  Entity* lightSpawner = new Entity();
+  {
+	  Spawner* s = new Spawner(vec3(0,0,0), &createPointLightEntity);
+	  lightSpawner->attach(s);
+	  spawners.push_back(s);
+  }
+
 
   vec3 minnowLoc = vec3(0, 3, 5);
   Entity* minnow;
@@ -318,6 +340,10 @@ static void initScene(ApplicationState &appstate, GameState &gstate, Camera* cam
 	  pose->orient = glm::angleAxis(glm::radians(90.0f), glm::vec3(0, 1, 0));
 	  minnow->attach(new AnimatableMesh(new Animation(meshes, 0.066)));
 	  minnow->attach(pose);
+	  vec3 color = vec3(distribution(generator), distribution(generator), distribution(generator));
+	  minnowLoc += vec3(distribution(generator), distribution(generator), distribution(generator)) * vec3(20.0f) - vec3(10.0f);
+	  PointLight* pointLight = new PointLight(minnowLoc, color);
+	  minnow->attach(pointLight);
   }
 
 
@@ -334,6 +360,7 @@ static void initScene(ApplicationState &appstate, GameState &gstate, Camera* cam
   }
 
 
+  gstate.activeScene->addEntity(lightSpawner);
   gstate.activeScene->addEntity(minnow);
   gstate.activeScene->addEntity(groundplane);
   gstate.activeScene->addEntity(mamaCube);

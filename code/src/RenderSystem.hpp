@@ -16,6 +16,7 @@
 #include "Scene.hpp"
 #include "Entity.hpp"
 #include "Component.hpp"
+#include "Lights.h"
 
 #include "utility/Texture.h"
 
@@ -26,12 +27,16 @@ namespace RenderSystem{
 
   static GLuint render_out_FBO;
   static GLuint render_out_color;
-  static Program* deferred_export = NULL;
-  static Program* deferred_uber = NULL;
-  static Program* deferred_shadow = NULL;
-  static Program* seafloor_deform = NULL;
+  static Program* deferred_export = nullptr;
+  static Program* deferred_uber = nullptr;
+  static Program* pointLightProg = nullptr;
+  static Program* sunLightProg = nullptr;
+  static Program* deferred_shadow = nullptr;
+  static Program* seafloor_deform = nullptr;
+  static Geometry sphereGeom = Geometry("" STRIFY(ASSET_DIR) "/sphere.obj");
+  static Geometry quadGeom = Geometry("" STRIFY(ASSET_DIR) "/quad.obj");
 
-  static ShaderLibrary* shaderlib = NULL;
+  static ShaderLibrary* shaderlib = nullptr;
   
   struct Buffers {
     std::vector<unsigned int> buffers;
@@ -69,14 +74,40 @@ namespace RenderSystem{
   void init(ApplicationState &appstate);
 
   void render(ApplicationState &appstate, GameState &gstate, double elapsedTime);
-
+  
   void updateLighting(Scene* scene);
+
+  void updatePointLights(Scene* scene);
+
+  void updateSunLights(Scene* scene);
+
+  void lightingPassSetGLState(GLuint framebuffer);
+
+  void lightingPassResetGLState();
+
+  void bindPointLight(PointLight* pointLight);
+
+  void bindSunLight(SunLight* pointLight);
+
+  void bindCamera(Scene* scene, Program* prog);
+
+  void bindBuffers(Buffers &buffers, Program* shader);
+
+  std::vector<PointLight*>* gatherPointLights(Scene* scene);
+
+  std::vector<SunLight*>* gatherSunLights(Scene* scene);
+
+  void drawPointLights(const vector<PointLight*> &pointLights);
+
+  void drawPointLight(PointLight* pointLight);
+
+  void drawSunLights(const vector<SunLight*> &sunLights);
+
+  void drawSunLight(SunLight* pointLight);
 
   void setMVP(Camera* camera);
 
   void geometryPass(GameState &gstate);
-
-  void applyShading(Scene* scene, ShaderLibrary &shaderlib);
 
   void drawEntities(Scene* scene, Program* shader);
 
@@ -89,6 +120,10 @@ namespace RenderSystem{
   void initDepthUniforms(double causticOrtho, double shadowOrtho);
 
   void updateDepthUniforms();
+
+  void setShadowMap(GameState &gstate);
+
+  void lightingPass(ApplicationState &appstate, GameState &gstate, double elapsedTime);
 
   void initCaustics();
 
