@@ -19,11 +19,11 @@ protected:
 
 class SunLight : public Component {
 public:
-	SunLight(glm::vec3 color, glm::vec3 direction) : color(color), direction(direction) {}
+	SunLight(glm::vec3 color, glm::vec3 direction) : color(color), direction(glm::normalize(direction)) {}
 	const glm::vec3 getColor() { return color; }
 	const glm::vec3 getDirection() { return direction; }
 
-	void setDirection(glm::vec3 dir) { direction = dir; }
+	void setDirection(glm::vec3 dir) { direction = glm::normalize(dir); }
 
 	glm::vec3 color;
 	glm::vec3 direction;
