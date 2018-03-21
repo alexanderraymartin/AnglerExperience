@@ -57,7 +57,7 @@ void RenderSystem::init(ApplicationState &appstate){
 
   initOutputFBO(&render_out_FBO, &render_out_color, w_width, w_height, GL_LINEAR);
 
-  initDepthUniforms(1, 10);
+  initDepthUniforms(.5, 10);
   initCaustics();
   initShadowMap(w_width, w_height);
 

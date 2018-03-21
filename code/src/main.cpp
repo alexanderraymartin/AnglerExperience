@@ -345,6 +345,7 @@ static void initScene(ApplicationState &appstate, GameState &gstate, Camera* cam
 	  angler->attach(new AnimatableMesh(new Animation(meshes, 0.066)));
 	  vec3 color = vec3(1.0, 0.5, 0.2);
 	  anglerLight = new PointLight(location, color);
+	  angler->attach(anglerLight);
   }
 
 
