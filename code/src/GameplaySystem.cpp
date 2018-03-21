@@ -13,14 +13,9 @@
 
 #include "components/Geometry.hpp"
 #include "components/SimpleComponents.hpp"
-#include "components/LightingComponents.hpp"
+#include "components/Lights.h"
 
 using namespace std;
-using namespace glm;
-
-// =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-        // Forward Declarations
-// =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
         // GameplaySystem functions
@@ -31,5 +26,5 @@ void GameplaySystem::update(ApplicationState &appstate, GameState &gstate, doubl
 
   Entity* sun = gstate.activeScene->getFirstWithComponent<SunLight>();
   SunLight* suncmpnt = sun->getFirstComponentType<SunLight>();
-  suncmpnt->location = vec3(0.0, 10.0, 0.0) + -gstate.levelDirection*static_cast<float>(gstate.levelProgress);
+  suncmpnt->setDirection(vec3(0.0, 10.0, 0.0) + -gstate.levelDirection*static_cast<float>(gstate.levelProgress));
 }

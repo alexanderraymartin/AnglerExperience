@@ -10,8 +10,6 @@
 #include "components/SimpleComponents.hpp"
 #include "components/AnimationComponents.hpp"
 #include "components/Geometry.hpp"
-#include "LightingComponents.hpp"
-
 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
         // Forward Declarations
@@ -20,12 +18,12 @@
 static void prepareBuffer(GLuint gbuffer);
 static void initDeferredBuffers(int width, int height, RenderSystem::Buffers &buffers);
 static void initOutputFBO(GLuint* render_out_FBO, GLuint* render_out_color, int w_width, int w_height, GLenum filter);
-static void bindGBuf(RenderSystem::Buffers &buffers, Program* shader);
 
 static void createGBufAttachment(int width, int height, vector<unsigned int> &buffers, unsigned int channel_type, unsigned int channels, unsigned int type);
 static void setGBufAttachment(RenderSystem::Buffers &buffers);
 static void setGBufDepth(int width, int height, RenderSystem::Buffers &buffers);
 
+static void drawLight(const Geometry &geomcomp, RenderSystem::MVPset &MVP, Program* shader);
 static void drawGeometry(const Geometry &geomcomp, RenderSystem::MVPset &MVP, Program* shader);
 static void drawGeometry(const Geometry &geomcomp, const Geometry *geomcomp2, 
   RenderSystem::MVPset &MVP, Program* shader, double interp);
@@ -42,9 +40,12 @@ void RenderSystem::init(ApplicationState &appstate){
 
   deferred_export = shaderlib->getPtr("deferred-export");
   deferred_uber = shaderlib->getPtr("deferred-uber");
+  pointLightProg = shaderlib->getPtr("deferred-pointLight");
   deferred_shadow = shaderlib->getPtr("deferred-shadow");
   deferred_shadow->setVerbose(false);
   seafloor_deform = shaderlib->getPtr("seafloor-deform");
+
+  sphereGeom.init();
 
   glEnable(GL_DEPTH_TEST);
   glDisable(GL_BLEND);
@@ -90,10 +91,12 @@ void RenderSystem::setShadowMap(GameState &gstate) {
 
 void RenderSystem::lightingPass(ApplicationState &appstate, GameState &gstate, double elapsedTime) {
 	//Needs to be changed
-	updateLighting(gstate.activeScene);
 	setShadowMap(gstate);
 	updateCaustic(elapsedTime, 24.0);
-	applyShading(gstate.activeScene, *shaderlib);
+
+	lightingPassSetGLState(render_out_FBO);
+	updateLighting(gstate.activeScene);
+	lightingPassResetGLState();
 }
 
 void RenderSystem::render(ApplicationState &appstate, GameState &gstate, double elapsedTime){
@@ -104,34 +107,92 @@ void RenderSystem::render(ApplicationState &appstate, GameState &gstate, double 
   PostProcessor::doPostProcessing(render_out_color, deferred_buffers.depthBuffer);
 }
 
-// This function is aweful and I hate it.
-void RenderSystem::updateLighting(const vector<PointLight> &lights){
-  shaderlib->fastActivate(deferred_uber);
-
-    // Locations for point lights so we only fetch once
-    for(Component *cmpnt : entpair.second->components){
-      // fprintf(stderr, "%p and %p\n", suncomp, pose);
-        SunLight* sun = static_cast<SunLight*>(cmpnt);
-
-        depthSet.lightView.loadIdentity();
-        depthSet.lightView.lookAt(vec3(0.0, 10, 0.0), vec3(0.0, 10, 0.0) + sun->direction, vec3(0,1,0));
-
-        depthSet.causticView.loadIdentity();
-        depthSet.causticView.lookAt(sun->location, sun->location + sun->direction, vec3(0,1,0));
-
-      
-    }
-  
+void RenderSystem::bindCamera(Scene* scene, Program* prog) {
+	Camera* cam = scene->camera;
+	glUniform3f(prog->getUniform("viewPos"), cam->getLocation().x, cam->getLocation().y, cam->getLocation().z);
 }
 
-void RenderSystem::applyShading(Scene* scene, ShaderLibrary &shaderlib){
-  glBindFramebuffer(GL_FRAMEBUFFER, render_out_FBO);
-  glClearColor(0.0, 0.0, 0.0, 1.0);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+//This can be optimized, either by caching it or building the list a more efficent way
+vector<PointLight*>* RenderSystem::gatherPointLights(Scene* scene) {
+	vector<PointLight*>* pointLights = new vector<PointLight*>();
+	for (pair<const Entity*, Entity*> entpair : scene->entities) {
+		PointLight* light = nullptr;
+		for (Component *cmpnt : entpair.second->components) {
+			GATHER_SINGLE_COMPONENT(light, PointLight*, cmpnt);
+			if (light) {
+				pointLights->push_back(light);
+			}
+		}
+	}
+	return pointLights;
+}
 
-  shaderlib.fastActivate(deferred_uber);
-  bindGBuf(deferred_buffers, deferred_uber);
-  PostProcessor::drawFSQuad();
+void RenderSystem::updateLighting(Scene* scene){
+	ASSERT_NO_GLERR();
+	vector<PointLight*>* pointLights = gatherPointLights(scene);
+	ASSERT_NO_GLERR();
+	bindBuffers(deferred_buffers, pointLightProg);
+	ASSERT_NO_GLERR();
+	bindCamera(scene, pointLightProg);
+	ASSERT_NO_GLERR();
+	drawPointLights(*pointLights);
+	//not sure if this is needed
+	free(pointLights);
+
+	/*
+	vector<SunLight*>* sunLights = gatherSunLights(scene);
+	bindBuffers(deferred_buffers, sunLightProg);
+	bindCamera(scene, sunLightProg);
+	drawSunLights(*sunLights);
+	//not sure if this is needed
+	free(sunLights);*/
+}
+
+void RenderSystem::drawPointLights(const vector<PointLight*> &pointLights) {
+	for (PointLight* pointLight : pointLights) {
+		drawPointLight(pointLight);
+	}
+}
+
+void RenderSystem::bindLight(PointLight* pointLight) {
+	vec3 pos = pointLight->getPosition();
+	vec3 color = pointLight->getColor();
+	glUniform3f(pointLightProg->getUniform("lightPos"), pos.x, pos.y, pos.z);
+	glUniform3f(pointLightProg->getUniform("color"), color.x, color.y, color.z);
+}
+
+void RenderSystem::drawPointLight(PointLight* pointLight) {
+	shaderlib->fastActivate(pointLightProg);
+	bindLight(pointLight);
+	MVP.M.pushMatrix();
+	MVP.M.translate(pointLight->getPosition());
+	MVP.M.scale(pointLight->getRadius());
+	drawLight(sphereGeom, MVP, pointLightProg);
+	MVP.M.popMatrix();
+}
+
+void RenderSystem::lightingPassResetGLState() {
+	glEnable(GL_DEPTH_TEST);
+	glDisable(GL_CULL_FACE);
+	glDisable(GL_BLEND);
+}
+
+void RenderSystem::lightingPassSetGLState(GLuint framebuffer) {
+	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+	glClearColor(0.0, 0.0, 0.0, 1.0);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	// Blend mode for additive
+	glEnable(GL_BLEND);
+	glBlendEquation(GL_FUNC_ADD);
+	glBlendFunc(GL_ONE, GL_ONE);
+
+	// Culling for 3D spheres - want 2D coverage
+	glEnable(GL_CULL_FACE);
+	glCullFace(GL_FRONT);
+
+	// No depth - light volumes shouldn't block other lights
+	glDisable(GL_DEPTH_TEST);
 }
 
 void RenderSystem::drawGroundPlane(const GameState& gstate, Program* shader){
@@ -240,6 +301,35 @@ void RenderSystem::onResize(GLFWwindow *window, int width, int height){
 // It may be possible to move some parts of this into one or more libraries. 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
+static void drawLight(const Geometry &geomcomp, RenderSystem::MVPset &MVP, Program* shader) {
+	int h_pos, h_nor, h_tex;
+	int h_pos2, h_nor2, h_tex2;
+	h_pos = h_nor = h_tex = -1;
+	h_pos2 = h_nor2 = h_tex2 = -1;
+
+	geomcomp.material.apply(shader);
+	glUniformMatrix4fv(shader->getUniform("M"), 1, GL_FALSE, value_ptr(MVP.M.topMatrix()));
+	glUniformMatrix4fv(shader->getUniform("V"), 1, GL_FALSE, value_ptr(MVP.V.topMatrix()));
+	glUniformMatrix4fv(shader->getUniform("P"), 1, GL_FALSE, value_ptr(MVP.P.topMatrix()));
+	glBindVertexArray(geomcomp.vaoID);
+	// Bind position buffer
+	h_pos = shader->getAttribute("vertPos");
+	GLSL::enableVertexAttribArray(h_pos);
+	glBindBuffer(GL_ARRAY_BUFFER, geomcomp.posBufID);
+	glVertexAttribPointer(h_pos, 3, GL_FLOAT, GL_FALSE, 0, (const void *)0);
+
+	// Bind element buffer
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, geomcomp.eleBufID);
+	// Draw
+	glDrawElements(GL_TRIANGLES, (int)geomcomp.eleBuf->size(), GL_UNSIGNED_INT, (const void *)0);
+
+	GLSL::disableVertexAttribArray(h_pos);
+
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+}
+
 static void drawGeometry(const Geometry &geomcomp, RenderSystem::MVPset &MVP, Program* shader){
   drawGeometry(geomcomp, NULL, MVP, shader, 0);
 }
@@ -251,22 +341,28 @@ static void drawGeometry(const Geometry &geomcomp, const Geometry *geomcomp2,
   h_pos = h_nor = h_tex = -1;
   h_pos2 = h_nor2 = h_tex2 = -1;
 
+  ASSERT_NO_GLERR();
   geomcomp.material.apply(shader);
-
+  ASSERT_NO_GLERR();
   glUniformMatrix4fv(shader->getUniform("M"), 1, GL_FALSE, value_ptr(MVP.M.topMatrix()));
   glUniformMatrix4fv(shader->getUniform("V"), 1, GL_FALSE, value_ptr(MVP.V.topMatrix()));
   glUniformMatrix4fv(shader->getUniform("P"), 1, GL_FALSE, value_ptr(MVP.P.topMatrix()));
+  ASSERT_NO_GLERR();
   if (geomcomp2 != nullptr) {
 	  glUniform1f(shader->getUniform("interp"), interp);
   }
-
   glBindVertexArray(geomcomp.vaoID);
+  ASSERT_NO_GLERR();
   // Bind position buffer
   h_pos = shader->getAttribute("vertPos");
+  ASSERT_NO_GLERR();
   GLSL::enableVertexAttribArray(h_pos);
+  ASSERT_NO_GLERR();
   glBindBuffer(GL_ARRAY_BUFFER, geomcomp.posBufID);
+  ASSERT_NO_GLERR();
   glVertexAttribPointer(h_pos, 3, GL_FLOAT, GL_FALSE, 0, (const void *)0);
 
+  ASSERT_NO_GLERR();
   // Bind normal buffer
   h_nor = shader->getAttribute("vertNor");
   if(h_nor != -1 && geomcomp.norBufID != 0) {
@@ -311,10 +407,11 @@ static void drawGeometry(const Geometry &geomcomp, const Geometry *geomcomp2,
     }
 
   }
-  
+
+  ASSERT_NO_GLERR();
   // Bind element buffer
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, geomcomp.eleBufID);
-  
+  ASSERT_NO_GLERR();
   // Draw
   glDrawElements(GL_TRIANGLES, (int)geomcomp.eleBuf->size(), GL_UNSIGNED_INT, (const void *)0);
   
@@ -347,15 +444,19 @@ static void prepareBuffer(GLuint gbuffer){
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
-static void bindGBuf(RenderSystem::Buffers &buffers, Program* shader) {
-  for (int i = 0; i < buffers.buffers.size(); i++) {
-    glActiveTexture(GL_TEXTURE0 + i);
-    glBindTexture(GL_TEXTURE_2D, buffers.buffers.at(i));
-  }
-  glUniform1i(shader->getUniform("gPosition"), 0);
-  glUniform1i(shader->getUniform("gNormal"), 1);
-  glUniform1i(shader->getUniform("gAlbedo"), 2);
-  glUniform1i(shader->getUniform("gSpecular"), 3);
+void RenderSystem::bindBuffers(Buffers &buffers, Program* shader) {
+	shaderlib->fastActivate(shader);
+	ASSERT_NO_GLERR();
+	for (int i = 0; i < buffers.buffers.size(); i++) {
+		glActiveTexture(GL_TEXTURE0 + i);
+		glBindTexture(GL_TEXTURE_2D, buffers.buffers.at(i));
+	}
+	ASSERT_NO_GLERR();
+	glUniform1i(shader->getUniform("gPosition"), 0);
+	glUniform1i(shader->getUniform("gNormal"), 1);
+	glUniform1i(shader->getUniform("gAlbedo"), 2);
+	glUniform1i(shader->getUniform("gSpecular"), 3);
+	ASSERT_NO_GLERR();
 
 }
 

@@ -5,6 +5,7 @@
 #include <limits>
 #define _USE_MATH_DEFINES
 #include <cmath>
+#include <random>
 
 #define GLEW_STATIC
 #include <GL/glew.h>
@@ -29,7 +30,6 @@
 #include "components/Geometry.hpp"
 #include "SimpleComponents.hpp"
 #include "AnimationComponents.hpp"
-#include "LightingComponents.hpp"
 #include "Material.hpp"
 #include "Camera.h"
 #include "Spawner.h"
@@ -47,6 +47,8 @@ using namespace std;
 
 static SolidMesh* antennaMesh;
 static vector<Spawner*> spawners;
+static default_random_engine generator;
+static uniform_real_distribution<float> distribution(0,1);
 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
         // Forward Declarations
@@ -255,6 +257,16 @@ static Entity* createCube(vec3 location) {
 	return cube;
 }
 
+static Entity* createPointLightEntity(vec3 location) {
+	Entity* light = new Entity();
+	vec3 color = vec3(distribution(generator), distribution(generator), distribution(generator));
+	location += vec3(distribution(generator), distribution(generator), distribution(generator)) * vec3(20.0f) - vec3(10.0f);
+	PointLight* pointLight = new PointLight(location, color);
+	light->attach(pointLight);
+
+	return light;
+}
+
 static void initScene(ApplicationState &appstate, GameState &gstate, Camera* camera){
   //StaticCamera* scenecam = new StaticCamera(37.5, glm::vec3(0.0, 3.4, 0.0), glm::vec3(0.0, 3.1, 3.0));
 	gstate.activeScene = new Scene(camera);
@@ -264,8 +276,7 @@ static void initScene(ApplicationState &appstate, GameState &gstate, Camera* cam
     sun = new Entity();
     sun->attach(new SunLight(
       glm::vec3(.7, .7, .67),
-      glm::vec3(0.5, -1.0, 1.0),
-      glm::vec3(0.0, 10.0, 0.0))
+      glm::vec3(0.5, -1.0, 1.0))
     );
   }
   gstate.activeScene->addEntity(sun);
@@ -296,6 +307,13 @@ static void initScene(ApplicationState &appstate, GameState &gstate, Camera* cam
 	  spawners.push_back(s);
   }
 
+  Entity* lightSpawner = new Entity();
+  {
+	  Spawner* s = new Spawner(vec3(0,0,0), &createPointLightEntity);
+	  lightSpawner->attach(s);
+	  spawners.push_back(s);
+  }
+
 
   vec3 minnowLoc = vec3(0, 3, 5);
   Entity* minnow;
@@ -319,6 +337,10 @@ static void initScene(ApplicationState &appstate, GameState &gstate, Camera* cam
 	  pose->orient = glm::angleAxis(glm::radians(90.0f), glm::vec3(0, 1, 0));
 	  minnow->attach(new AnimatableMesh(new Animation(meshes, 0.066)));
 	  minnow->attach(pose);
+	  vec3 color = vec3(distribution(generator), distribution(generator), distribution(generator));
+	  minnowLoc += vec3(distribution(generator), distribution(generator), distribution(generator)) * vec3(20.0f) - vec3(10.0f);
+	  PointLight* pointLight = new PointLight(minnowLoc, color);
+	  minnow->attach(pointLight);
   }
 
 
@@ -335,6 +357,7 @@ static void initScene(ApplicationState &appstate, GameState &gstate, Camera* cam
   }
 
 
+  gstate.activeScene->addEntity(lightSpawner);
   gstate.activeScene->addEntity(minnow);
   gstate.activeScene->addEntity(groundplane);
   gstate.activeScene->addEntity(mamaCube);
