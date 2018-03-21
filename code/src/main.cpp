@@ -247,12 +247,15 @@ static Entity* createCube(vec3 location) {
 	Material mat("" STRIFY(ASSET_DIR) "/simple-phong.mat");
 	SolidMesh* mesh = new SolidMesh(cubegeo);
 	mesh->setMaterial(mat);
-	location.x += (rand() % 100) / 10.0f - 5;
+	location.x += distribution(generator)*10-5;
 	Pose* pose = new Pose(location);
 	pose->scale = glm::vec3(0.1, 0.1, 0.1);
 	pose->orient = glm::angleAxis(glm::radians(45.0f), glm::vec3(0, 1, 0));
 	cube->attach(mesh);
 	cube->attach(pose);
+	vec3 color = vec3(distribution(generator), distribution(generator), distribution(generator))/vec3(5.0f);
+	PointLight* pointLight = new PointLight(location, color);
+	cube->attach(pointLight);
 	
 	return cube;
 }
@@ -260,7 +263,7 @@ static Entity* createCube(vec3 location) {
 static Entity* createPointLightEntity(vec3 location) {
 	Entity* light = new Entity();
 	vec3 color = vec3(distribution(generator), distribution(generator), distribution(generator));
-	location += vec3(distribution(generator), distribution(generator), distribution(generator)) * vec3(20.0f) - vec3(10.0f);
+	location += vec3(distribution(generator), 0, distribution(generator)) * vec3(10.0f) - vec3(5.0f);
 	PointLight* pointLight = new PointLight(location, color);
 	light->attach(pointLight);
 
@@ -275,7 +278,7 @@ static void initScene(ApplicationState &appstate, GameState &gstate, Camera* cam
   {
     sun = new Entity();
     sun->attach(new SunLight(
-      glm::vec3(.7, .7, .67),
+      glm::vec3(.2, .2, .19),
       glm::vec3(0.5, -1.0, 1.0))
     );
   }

@@ -81,7 +81,6 @@ namespace RenderSystem{
 
   void updateSunLights(Scene* scene);
 
-
   void lightingPassSetGLState(GLuint framebuffer);
 
   void lightingPassResetGLState();

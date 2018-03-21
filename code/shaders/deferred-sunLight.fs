@@ -1,6 +1,5 @@
 #version 330 core
 
-#define MAX_POINT_LIGHTS 16
 #define BACKGROUND vec3(.18, .20, .22)
 #define EPS 1e-7
 
@@ -44,8 +43,8 @@ void main()
   vec3 H = normalize(sunVec+viewDir);
   //vec3 lighting = Albedo * Ambient; // hard-coded ambient component
 
-  vec3 lighting = Albedo * max(Albedo*color*dot(Normal, sunVec),0.0) + max(SpecColor*color*pow(dot(Normal, H),shine)*step(0.0, dot(sunVec, Normal)), 0.0);
-
+  vec3 lighting = max(Albedo*color*dot(Normal, sunVec),0.0) + max(SpecColor*color*pow(dot(Normal, H),shine)*step(0.0, dot(sunVec, Normal)), 0.0);
+/*
 
   vec4 shadowCoord = shadowMatrix * texture(gPosition, TexCoords);
   vec4 causticCoord = causticMatrix * texture(gPosition, TexCoords);
@@ -62,12 +61,12 @@ void main()
   lighting = mix(lighting, lighting*caustColor.rgb, caustColor.a*.8) * INV(BackMask);
 
   lighting = mix(lighting, BACKGROUND, BackMask) * visibility;
-
+*/
     // exponential fog
     float fogDensity = .051;
     float linearDepth = FragPos.z-4;
     float fog = 1.0 - clamp(exp(-fogDensity*linearDepth), 0.0, 1.0); 
-    vec3 fogColor = vec3(0.2, 0.2, 0.3);
+    vec3 fogColor = vec3(0.1, 0.1, 0.2);
     lighting = mix (lighting, fogColor, fog + BackMask);
 
   FragColor = vec4(lighting, 1.0);
