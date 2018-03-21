@@ -245,7 +245,7 @@ static Entity* createCube(vec3 location) {
 	Entity* cube;
 	vector<Geometry> cubegeo;
 	//Try to do load calls only once, not every time create is called. May require more work to do this effictively
-	Geometry::loadFullObj("" STRIFY(ASSET_DIR) "/cube.obj", cubegeo);
+	Geometry::loadFullObj("" STRIFY(ASSET_DIR) "/sphere.obj", cubegeo);
 	cube = new Entity();
 	Material mat("" STRIFY(ASSET_DIR) "/simple-phong.mat");
 	SolidMesh* mesh = new SolidMesh(cubegeo);
