@@ -180,6 +180,9 @@ void RenderSystem::bindSunLight(SunLight* sunLight) {
 	vec3 color = sunLight->getColor();
 	glUniform3f(sunLightProg->getUniform("lightDir"), dir.x, dir.y, dir.z);
 	glUniform3f(sunLightProg->getUniform("color"), color.x, color.y, color.z);
+
+  depthSet.lightView.loadIdentity();
+  depthSet.lightView.lookAt(vec3(0.0, 10, 0.0), vec3(0.0, 10, 0.0) + dir, vec3(0,1,0));
 }
 
 void RenderSystem::drawSunLight(SunLight* sunLight) {
