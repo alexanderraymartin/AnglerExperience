@@ -89,6 +89,17 @@ void main()
     float fog = 1.0 - clamp(exp(-fogDensity*linearDepth), 0.0, 1.0); 
     vec3 fogColor = vec3(0.2, 0.2, 0.3);
     lighting = mix (lighting, fogColor, fog + BackMask);
+
+/* Create an oval of fog about a fish */
+    vec3 centerloc = vec3(0, 3, 5);
+    float inside = pow(FragPos.x - centerloc.x, 2)/(0.3*0.3) +
+      pow(FragPos.y - centerloc.y, 2)/(.05*.05) +
+      pow(FragPos.z - centerloc.z, 2)/(.1*.1);
+
+    fog = 1.0 - clamp(exp(-fogDensity*inside), 0.0, 1.0); 
+    if (inside  < 1) {
+        lighting = mix(lighting, vec3(0.2, 0.2, 0.7), (1 - inside)/2);
+    }
 /*
     // create a ball of fog
     vec3 line = normalize(FragPos - viewPos);

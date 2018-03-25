@@ -22,6 +22,17 @@ class Entity{
     children.push_back(child);
   }
 
+  virtual Entity* clone() {
+    Entity* newentity = new Entity();
+    for (Component* cmpnt : components) {
+      newentity->attach(cmpnt->instantiate());
+    }
+    for (Entity* child : children) {
+      newentity->addChild(child->clone());
+    }
+    return(newentity);
+  }
+
   template<typename C> 
   C* getFirstComponentType();
 

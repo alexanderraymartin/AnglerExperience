@@ -22,6 +22,7 @@ class LinearTranslationAnim : public AnimationComponent{
  public:
   LinearTranslationAnim() : trans(vec3(0.0)){}
   LinearTranslationAnim(const vec3 &dxyz) : trans(dxyz){}
+  LinearTranslationAnim* clone() { return(new LinearTranslationAnim(*this)); }
 
   vec3 trans;
 };
@@ -30,6 +31,7 @@ class LinearScaleAnim : public AnimationComponent{
  public:
   LinearScaleAnim();
   LinearScaleAnim(const vec3 &dscale) : scalar(dscale){}
+  LinearScaleAnim* clone() { return(new LinearScaleAnim(*this)); }
 
   vec3 scalar;
 };
@@ -39,6 +41,7 @@ class LinearRotationAnim : public AnimationComponent{
   LinearRotationAnim() : mode(AXISANGLE), axis(vec3(0.0)), angle(0.0) {}
   LinearRotationAnim(const vec3 &axis, float dtheta) : axis(axis), angle(dtheta), mode(AXISANGLE) {}
   LinearRotationAnim(const vec3 &euler) : euler(euler), mode(EULER){}
+  LinearRotationAnim* clone() { return(new LinearRotationAnim(*this)); }
 
   enum Mode{
     EULER,
@@ -59,6 +62,8 @@ class Animation {
     meshes(copymeshes), timePerKeyFrame(0.1) {}
   Animation(vector<SolidMesh *> &copymeshes, double timePerKeyFrame) :
     meshes(copymeshes), timePerKeyFrame(timePerKeyFrame) {}
+
+  Animation* clone() { return(new Animation(*this)); }
 
   vector<SolidMesh *> meshes;
   double timePerKeyFrame = 0.1;
@@ -90,6 +95,7 @@ class AnimatableMesh : public AnimationComponent{
   AnimatableMesh();
   AnimatableMesh(Animation *anim){animations.push_back(anim);}
   ~AnimatableMesh(){};
+  AnimatableMesh* clone() { return(new AnimatableMesh(*this)); }
 
   void addAnimation(Animation *anim) {animations.push_back(anim);}
 

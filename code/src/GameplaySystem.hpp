@@ -18,8 +18,9 @@
 #include "Component.hpp"
 
 namespace GameplaySystem{
+  
+	void update(ApplicationState &appstate, GameState &gstate, double elapsedTime, float ***fishLoc, float ***headLoc);
 
-	void update(ApplicationState &appstate, GameState &gstate, double elapsedTime);
 
 };
 

@@ -46,9 +46,12 @@
 
 using namespace std;
 
-// #define FORCEWINDOW
+#define FORCEWINDOW
+<<<<<<< HEAD
 #define FORCE_WIDTH 1280
 #define FORCE_HEIGHT 720
+=======
+>>>>>>> MergeGameplay
 
 static SolidMesh* antennaMesh;
 static vector<Spawner*> spawners;
@@ -97,11 +100,31 @@ int main(int argc, char** argv){
   double mouseX, mouseY;
   AntennaGenerator *antennaGen = new AntennaGenerator();
 
-  initText2D("" STRIFY(ASSET_DIR) "/Holstein.DDS", "" STRIFY(SHADER_DIR) "/TextVertexShader.vertexshader", "" STRIFY(SHADER_DIR) "/TextVertexShader.fragmentshader");
+  initText2D("../src/utility/2dText/Holstein.DDS", "../src/utility/2dText/TextVertexShader.vertexshader", "../src/utility/2dText/TextVertexShader.fragmentshader");
   int fishEaten = 0;
 
   gstate.gameTime.reset();
   while(!glfwWindowShouldClose(appstate.window)){
+<<<<<<< HEAD
+    double fxdt = gstate.fxAnimTime.elapsed();
+    double gdt = gstate.gameTime.elapsed();
+    // TODO: Appropriate timestep loop structure
+    // TODO: PlayerSystem::update(appstate, gstate, elapsedTime);
+	camera->update(appstate.window, fxdt);
+	//SpawnSystem::update(appstate, gstate, dt);
+	for (Spawner* s : spawners) {
+		s->update(gstate, fxdt);
+	}
+    // TODO: SwarmSystem::update(appstate, gstate, elapsedTime);
+    // TODO: PhysicsSystem::update(appstate, gstate, elapsedTime);
+    // TODO: ParticleSystem::update(appstate, gstate, elapsedTime); // Particle System System*
+    GameplaySystem::update(appstate, gstate, gdt);
+    //AnimationSystem::update(appstate, gstate, fxdt);
+
+
+	//An FPS Counter so we can see how things are going
+	cout << "FPS: " << round(1.0 / fxdt) << "\n";
+=======
 
 
     glfwGetCursorPos(appstate.window, &mouseX, &mouseY);
@@ -109,18 +132,29 @@ int main(int argc, char** argv){
 
     double fxdt = gstate.fxAnimTime.elapsed();
     double gdt = gstate.gameTime.elapsed();
-
+    // TODO: Appropriate timestep loop structure
+    {
+      // TODO: PlayerSystem::update(appstate, gstate, elapsedTime);
+      // TODO: CameraSystem::update(appstate, gstate, elapsedTime);
 	  camera->update(appstate.window, fxdt);
-    for (Spawner* s : spawners) {
-      s->update(gstate, fxdt);
-    }
+      for (Spawner* s : spawners) {
+        s->update(gstate, fxdt);
+      }
       
-    SwarmSystem::update(appstate, gstate, fxdt, &fishLoc, &headLoc, 2.5, mousePos.x, mousePos.y);
-    GameplaySystem::update(appstate, gstate, gdt, &fishLoc, &headLoc);
-    // AnimationSystem::update(appstate, gstate, fxdt);
+      SwarmSystem::update(appstate, gstate, fxdt, &fishLoc, &headLoc, 2.5, mousePos.x, mousePos.y);
+      // TODO: PhysicsSystem::update(appstate, gstate, elapsedTime);
+      // TODO: ParticleSystem::update(appstate, gstate, elapsedTime); // Particle System System*
+      GameplaySystem::update(appstate, gstate, gdt, &fishLoc, &headLoc);
+      AnimationSystem::update(appstate, gstate, fxdt);
+    }
+>>>>>>> MergeGameplay
 
-    //An FPS Counter so we can see how things are going
-    cout << "FPS: " << round(1.0 / fxdt) << "\n";
+    // Rendering happens here. This 'RenderSystem' will end up containing a lot and effectively
+    // utilize many self-contained subsystems (semantically not real systems) which do individual
+    // parts of the drawing and operate on different buffers and geometries. However I'd like to
+    // try and keep all that linked together inside of the single RenderSystem for simplicity and
+    // so that not buffers or other data has to be shared between calls here in main().
+
 
     Geometry* geo = antennaGen->generateAntenna(vec3(-0.87f, 3.29f, 3.1f), mousePos);
     antennaMesh->geometries = {*geo};
@@ -205,18 +239,22 @@ static void initGLFW(ApplicationState &appstate){
   glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
   // Later this should only run if settings are not already loaded from a save/config
-  UINT w_width = 854;
-  UINT w_height = 480;
+  UINT w_width = 1280;
+  UINT w_height = 720;
 
   GLFWmonitor* monitor = autoDetectScreen(&w_width, &w_height);
 
 #ifdef FORCEWINDOW
-  fprintf(stderr, "Forced Window\n");
+<<<<<<< HEAD
   monitor = nullptr;
 #if defined FORCE_WIDTH && defined FORCE_HEIGHT
   w_width = FORCE_WIDTH;
   w_height = FORCE_HEIGHT;
 #endif 
+=======
+  fprintf(stderr, "Forced Window\n");
+  monitor = nullptr;
+>>>>>>> MergeGameplay
 #endif
 
 
@@ -296,6 +334,27 @@ static Entity* createCube(vec3 location) {
     cubeTemplate->attach(pose);
   }
 
+<<<<<<< HEAD
+	Entity* cube;
+	vector<Geometry> cubegeo;
+	//Try to do load calls only once, not every time create is called. May require more work to do this effictively
+	Geometry::loadFullObj("" STRIFY(ASSET_DIR) "/sphere.obj", cubegeo);
+	cube = new Entity();
+	Material mat("" STRIFY(ASSET_DIR) "/simple-phong.mat");
+	SolidMesh* mesh = new SolidMesh(cubegeo);
+	mesh->setMaterial(mat);
+	location.x += distribution(generator)*10-5;
+	Pose* pose = new Pose(location);
+	pose->scale = glm::vec3(0.1, 0.1, 0.1);
+	pose->orient = glm::angleAxis(glm::radians(45.0f), glm::vec3(0, 1, 0));
+	cube->attach(mesh);
+	cube->attach(pose);
+	vec3 color = vec3(distribution(generator), distribution(generator), distribution(generator))/vec3(5.0f);
+	PointLight* pointLight = new PointLight(location, color);
+	cube->attach(pointLight);
+	
+	return cube;
+=======
   Entity* newcube = cubeTemplate->clone();
   Pose* pose = cubeTemplate->getFirstComponentType<Pose>();
   Pose* oldpose = cubeTemplate->getFirstComponentType<Pose>();
@@ -304,7 +363,7 @@ static Entity* createCube(vec3 location) {
     pose->loc = location;
   }
   return(newcube);
-
+>>>>>>> MergeGameplay
 }
 
 static Entity* createPointLightEntity(vec3 location) {
@@ -351,13 +410,14 @@ static void initScene(ApplicationState &appstate, GameState &gstate, Camera* cam
   }
 
   vec3 cubeLoc = vec3(0, 3, 10);
-  Entity* mamaCube = new Entity();
+  Entity* mamaCube = createCube(cubeLoc);
   {
 	  Spawner* s = new Spawner(cubeLoc, &createCube);
 	  mamaCube->attach(s);
-	  // spawners.push_back(s);
+	  spawners.push_back(s);
   }
 
+<<<<<<< HEAD
   Entity* lightSpawner = new Entity();
   {
 	  Spawner* s = new Spawner(vec3(0,0,0), &createPointLightEntity);
@@ -365,6 +425,107 @@ static void initScene(ApplicationState &appstate, GameState &gstate, Camera* cam
 	  spawners.push_back(s);
   }
 
+  Entity* angler = new Entity();
+  {
+	  angler = new Entity();
+
+	  vector<SolidMesh*> meshes;
+	  for (int i = 0; i < 19; i++) {
+		  vector<Geometry> minnowgeo;
+		  Material mat("" STRIFY(ASSET_DIR) "/simple-phong.mat");
+		  string num = i < 9 ? string("0") + to_string(i + 1) : to_string(i + 1);
+		  Geometry::loadFullObj((string("" STRIFY(ASSET_DIR) "/minnow2/Minnow_0000")
+			  + num + string(".obj")).c_str(), minnowgeo);
+		  SolidMesh* mesh = new SolidMesh(minnowgeo);
+		  mesh->setMaterial(mat);
+		  meshes.push_back(mesh);
+	  }
+
+	  vec3 location = vec3(0, 3, 5);
+	  Pose* pose = new Pose(location);
+	  pose->scale = glm::vec3(1, 1, 1);
+	  pose->orient = glm::angleAxis(glm::radians(90.0f), glm::vec3(0, 1, 0));
+
+	  angler->attach(pose);
+	  angler->attach(new AnimatableMesh(new Animation(meshes, 0.066)));
+	  vec3 color = vec3(1.0, 0.5, 0.2);
+	  anglerLight = new PointLight(location, color);
+	  angler->attach(anglerLight);
+  }
+
+
+  vec3 minnowLoc = vec3(0, 3, 5);
+ // Entity* minnow;
+ /* {
+	  minnow = new Entity();
+
+	  vector<SolidMesh*> meshes;
+	  for (int i = 0; i < 19; i++) {
+		  vector<Geometry> minnowgeo;
+		  Material mat("" STRIFY(ASSET_DIR) "/simple-phong.mat");
+		  string num = i < 9 ? string("0") + to_string(i + 1) : to_string(i + 1);
+		  Geometry::loadFullObj((string("" STRIFY(ASSET_DIR) "/minnow2/Minnow_0000")
+			  + num + string(".obj")).c_str(), minnowgeo);
+		  SolidMesh* mesh = new SolidMesh(minnowgeo);
+		  mesh->setMaterial(mat);
+		  meshes.push_back(mesh);
+	  }
+
+	  Pose* pose = new Pose(minnowLoc);
+	  pose->scale = glm::vec3(1, 1, 1);
+	  pose->orient = glm::angleAxis(glm::radians(90.0f), glm::vec3(0, 1, 0));
+	  minnow->attach(new AnimatableMesh(new Animation(meshes, 0.066)));
+	  minnow->attach(pose);
+	  vec3 color = vec3(distribution(generator), distribution(generator), distribution(generator));
+	  minnowLoc += vec3(distribution(generator), distribution(generator), distribution(generator)) * vec3(20.0f) - vec3(10.0f);
+	  PointLight* pointLight = new PointLight(minnowLoc, color);
+	  minnow->attach(pointLight);
+  }*/
+=======
+  Entity* cube2;
+  {
+    cube2 = new Entity();
+	Material mat("" STRIFY(ASSET_DIR) "/simple-phong.mat");
+	vector<Geometry> cubegeo;
+	Geometry::loadFullObj("" STRIFY(ASSET_DIR) "/cube.obj", cubegeo);
+    SolidMesh* mesh = new SolidMesh(cubegeo);
+    mesh->setMaterial(mat);
+    
+    Pose* pose = new Pose(glm::vec3(4, 6, 10));
+    pose->scale = glm::vec3(0.1, 0.1, 0.1);
+    pose->orient = glm::angleAxis(glm::radians(45.0f), glm::vec3(0, 1, 0));
+    cube2->attach(mesh);
+    cube2->attach(pose);
+  }
+
+  Entity* cube3;
+  {
+    cube3 = new Entity();
+	Material mat("" STRIFY(ASSET_DIR) "/simple-phong.mat");
+	vector<Geometry> cubegeo;
+	Geometry::loadFullObj("" STRIFY(ASSET_DIR) "/cube.obj", cubegeo);
+    SolidMesh* mesh = new SolidMesh(cubegeo);
+    mesh->setMaterial(mat);
+    
+    Pose* pose = new Pose(glm::vec3(2, 3, 30));
+    pose->scale = glm::vec3(0.1, 0.1, 0.1);
+    pose->orient = glm::angleAxis(glm::radians(45.0f), glm::vec3(0, 1, 0));
+    cube3->attach(mesh);
+    cube3->attach(pose);
+  }
+>>>>>>> MergeGameplay
+
+  vector<SolidMesh*> meshes;
+  for (int i = 0; i < 19; i++) {
+    vector<Geometry> minnowgeo;
+    Material mat("" STRIFY(ASSET_DIR) "/simple-phong.mat");
+    string num = i < 9 ? string("0") + to_string(i + 1) : to_string(i + 1);
+    Geometry::loadFullObj((string("" STRIFY(ASSET_DIR) "/minnow_fix/Minnow_0000")
+      + num + string(".obj")).c_str(), minnowgeo);
+    SolidMesh* mesh = new SolidMesh(minnowgeo);
+    mesh->setMaterial(mat);
+    meshes.push_back(mesh);
+  }
 
  
   Entity* angler;
@@ -379,15 +540,12 @@ static void initScene(ApplicationState &appstate, GameState &gstate, Camera* cam
     geo[1].material = teeth;
     geo[2].material = body;
 
-    vec3 loc = vec3(-1.2, 3.12, 3.0);
 	  SolidMesh* mesh = new SolidMesh(geo);
-	  Pose* pose = new Pose(loc);
+	  Pose* pose = new Pose(vec3(-1.2, 3.12, 3.0));
 	  pose->scale = glm::vec3(.4, .4, .4);
 	  pose->orient = glm::angleAxis(glm::radians(90.0f), glm::vec3(0, 1, 0));
 	  angler->attach(mesh);
 	  angler->attach(pose);
-    anglerLight = new PointLight(loc, vec3(1.0, 0.5, 0.2));
-    angler->attach(anglerLight);
   }gstate.activeScene->addEntity(angler);
 
   Entity* antenna;
@@ -403,8 +561,13 @@ static void initScene(ApplicationState &appstate, GameState &gstate, Camera* cam
   }
 
 
+<<<<<<< HEAD
   gstate.activeScene->addEntity(lightSpawner);
+  gstate.activeScene->addEntity(angler);
+=======
+>>>>>>> MergeGameplay
   gstate.activeScene->addEntity(groundplane);
+  //gstate.activeScene->addEntity(mamaCube);
   gstate.activeScene->addEntity(antenna);
 
   gstate.activeScene->addEntity(sun);

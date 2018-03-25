@@ -17,11 +17,17 @@ using namespace std;
 class Component{
  public:
   virtual ~Component(){}
+
+  virtual Component* clone() = 0;
+
+  virtual Component* instantiate() {
+    return(clone());
+  }
+
   // A switch to enable/disable the component.
   bool isActive = true;
   // False marks that this component should be treated as inactive by any standard sweep through the scene graph. Probably so that it can be handled as a special case. 
   bool isSweepable = true;
-  
   
 };
 

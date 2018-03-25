@@ -40,6 +40,7 @@ class Material : public Component{
   Material(const json &matjson);
   Material(const string &path);
   Material(const char* path) : Material(string(path)) {}
+  Material* clone() { return new Material(*this); }
 
 
   void setIntProp(const string &keyword, int prop);

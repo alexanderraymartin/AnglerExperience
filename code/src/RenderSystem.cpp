@@ -27,7 +27,7 @@ static void drawLight(const Geometry &geomcomp, RenderSystem::MVPset &MVP, Progr
 static void drawSunLight(const Geometry &geomcomp, RenderSystem::MVPset &MVP, Program* shader);
 static void drawGeometry(const Geometry &geomcomp, RenderSystem::MVPset &MVP, Program* shader);
 static void drawGeometry(const Geometry &geomcomp, const Geometry *geomcomp2, 
-  RenderSystem::MVPset &MVP, Program* shader, double interp);
+RenderSystem::MVPset &MVP, Program* shader, double interp);
 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
         // RenderSystem functions
@@ -183,6 +183,9 @@ void RenderSystem::bindSunLight(SunLight* sunLight) {
 
   depthSet.lightView.loadIdentity();
   depthSet.lightView.lookAt(vec3(0.0, 10, 0.0), vec3(0.0, 10, 0.0) + dir, vec3(0,1,0));
+
+  depthSet.causticView.loadIdentity();
+  depthSet.causticView.lookAt(sunLight->getLocation(), sunLight->getLocation() + dir, vec3(0,1,0));
 }
 
 void RenderSystem::drawSunLight(SunLight* sunLight) {

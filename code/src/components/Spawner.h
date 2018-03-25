@@ -11,6 +11,7 @@ public:
 
 	Spawner(glm::vec3 location, Entity* (*fishFunc)(glm::vec3 location)) : location(location), newFish(fishFunc) {}
 	Spawner(glm::vec3 location, Entity* (*fishFunc)(glm::vec3 location), float spawnTime) : location(location), newFish(fishFunc), timePerSpawn(spawnTime) {}
+  Spawner* clone() { return new Spawner(*this); }
 
 	void update(GameState &state, float dt);
 

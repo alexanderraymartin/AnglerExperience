@@ -21,6 +21,8 @@ public:
   Geometry(const char* objname);
   virtual ~Geometry();
 
+  Geometry* clone() { return(new Geometry(*this)); }
+
   void createGeometry(tinyobj::shape_t &shape);
   void init();
   void initDynamic();
@@ -46,6 +48,8 @@ public:
   unsigned norBufID;
   unsigned texBufID;
   unsigned vaoID;
+
+  string sourceName; // For debugging
 };
 
 #endif

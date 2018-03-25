@@ -24,9 +24,14 @@ class Scene{
 
   void addEntity(Entity* entity){entities[entity] = entity;}
 
-  void submitToKill(Entity* entity);
+  void submitToKill(Entity* entity){killqueue.push(entity);}
 
-  void clearKillQ();
+  void executeKillQueue() {
+    while (!killqueue.empty()) {
+      entities.erase(killqueue.front());
+      killqueue.pop();
+    }
+  }
 
   template<typename C>
   Entity* getFirstWithComponent(bool hidden = false);
@@ -41,7 +46,7 @@ class Scene{
   // From what I understand most engines are the same way except they map based on a UUID
   unordered_map<const Entity*, Entity*> entities;
   
-  queue<unordered_map<const Entity*, Entity*>::const_iterator> killqueue;
+  queue<Entity*> killqueue;
 
   //Contiguous data goes below this line if needed
 

@@ -74,6 +74,8 @@ public:
 
 	DynamicCamera(float fov, float near, float far) : fov(fov), near(near), far(far), viewDirection(defaultRotation) {}
 
+  DynamicCamera* clone() { return new DynamicCamera(*this); }
+
 	//Shake the camera
 	//Current model uses single instance of force
 	//Amount is intensity and duration in seconds
@@ -99,6 +101,7 @@ class FPcamera : public Camera{
 public:
 	FPcamera() : pose(vec3(0.0)) {};
 	FPcamera(const glm::vec3& loc) : pose(loc) {}
+  FPcamera* clone() { return new FPcamera(*this); }
 
 	void update(GLFWwindow* window, float elapsedTime);
 

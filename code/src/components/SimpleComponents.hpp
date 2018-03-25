@@ -20,9 +20,11 @@ using namespace std;
 
 class Pose : public Component{
  public:
-  Pose();
+  Pose() {}
   Pose(const glm::vec3 nloc) : loc(nloc){};
   Pose(const glm::vec3 nloc, const glm::quat nori): loc(nloc), orient(nori){};
+
+  Pose* clone() { return(new Pose(*this)); }
 
   glm::mat4 getAffineMatrix(){return(glm::translate(glm::mat4(1.0), loc) * glm::toMat4(orient) * glm::scale(glm::mat4(1.0), scale) * preaffine);}
 
@@ -38,6 +40,13 @@ class SolidMesh : public Component{
   SolidMesh(vector<Geometry> &copygeom){geometries = copygeom;}
   ~SolidMesh(){};
 
+  SolidMesh* clone() { return(new SolidMesh(*this)); }
+
+  Component* instantiate() {
+    SolidMesh* newmesh = new SolidMesh(geometries);
+    return(newmesh);
+  }
+
   void setMaterial(Material &mat) {for(Geometry &geom : geometries){geom.material = mat;}}
 
   vector<Geometry> geometries;
@@ -47,6 +56,7 @@ class SolidMesh : public Component{
 class GroundPlane : public Component {
  public:
   GroundPlane(const vec3& origin, const quat& orient, const vec3& scale) : levelOrigin(origin), levelOrient(orient), levelScale(scale) {}
+  GroundPlane* clone() { return(new GroundPlane(*this)); }
 
   glm::mat4 getAffineMatrix(float levelProgress, int offset){
     return(
@@ -72,12 +82,26 @@ class Camera : public Component{
 
 };
 
+class Swarmable : public Component{
+ public:
+  virtual ~Swarmable(){};
+
+  Swarmable* clone() { return new Swarmable(*this); }
+
+  int fishNum;
+};
+
 class StaticCamera : public Camera{
  public:
   StaticCamera() : fov(45.0), near(.01), far(100.0), pose(glm::vec3(0.0)), lookat(glm::vec3(0.0)), updir(glm::vec3(0.0, 1.0, 0.0)){}
   StaticCamera(float fov, const glm::vec3 &loc, const glm::vec3 &look) : fov(fov), near(.01), far(100.0), pose(loc), lookat(look), updir(glm::vec3(0.0, -1.0, 0.0)){}
+  StaticCamera* clone() { return(new StaticCamera(*this)); }
 
   glm::vec3 getViewDir(){return(lookat-pose.loc);}
+
+  glm::vec3 getLocation() {
+    return(pose.loc);
+  }
 
   glm::mat4 getView(){
     return(glm::lookAt(

@@ -3,9 +3,7 @@ cmake_minimum_required(VERSION 2.7)
 # Name of the project
 project(Angler_Experience)
 
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++1y")
-
-# set(CMAKE_BUILD_TYPE DEBUG)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++1y")
 
 set(GLEW_DIR "$ENV{GLEW_DIR}")
 if(NOT GLEW_DIR)
@@ -90,6 +88,8 @@ endfunction(BuildProperties)
 
 add_subdirectory("src/utility")
 
+add_subdirectory("src/utility/2dText")
+
 add_subdirectory("libs/TinyObj")
 
 file(GLOB SOURCES "src/*.cpp" "src/components/*.cpp")
@@ -105,11 +105,27 @@ include_directories("${PROJECT_SOURCE_DIR}/src/components")
 
 # Sets the APPTYPE constant so that the executable will compile. See core.h for context
 target_compile_definitions(${CMAKE_PROJECT_NAME} PUBLIC APPTYPE=ApplicationType::GAME)
-add_definitions("-DASSET_DIR=${CMAKE_SOURCE_DIR}/gameassets" "-DSHADER_DIR=${CMAKE_SOURCE_DIR}/shaders")
+
+
+if(CMAKE_BUILD_TYPE MATCHES Release)
+  set(ASSET_DIR "gameassets")
+  set(SHADER_DIR "shaders")
+else()
+  set(ASSET_DIR "${CMAKE_SOURCE_DIR}/gameassets")
+  set(SHADER_DIR "${CMAKE_SOURCE_DIR}/shaders")
+endif()
+
+MESSAGE( STATUS "CMAKE_BUILD_TYPE: " ${CMAKE_BUILD_TYPE} )
+MESSAGE( STATUS "ASSET_DIR: " ${ASSET_DIR} )
+MESSAGE( STATUS "SHADER_DIR: " ${SHADER_DIR} )
+
+add_definitions("-DASSET_DIR=${ASSET_DIR}" "-DSHADER_DIR=${SHADER_DIR}")
 
 BuildProperties(${CMAKE_PROJECT_NAME})
 
 target_link_libraries(${CMAKE_PROJECT_NAME} utilityTarget)
+
+target_link_libraries(${CMAKE_PROJECT_NAME} utility2dTextTarget)
 
 target_link_libraries(${CMAKE_PROJECT_NAME} tinyObjTarget)
 

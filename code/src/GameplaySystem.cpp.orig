@@ -1,3 +1,4 @@
+
 #include "GameplaySystem.hpp"
 #include <common.h>
 #include <Program.h>
@@ -15,22 +16,26 @@
 
 #include "components/Geometry.hpp"
 #include "components/SimpleComponents.hpp"
+<<<<<<< HEAD
 #include "components/Lights.h"
+=======
+#include "components/AnimationComponents.hpp"
 
-#define SPEED .005f
+#define SPEED .01f
 #define SWARM_RADIUS .1f
-#define FISH_RADIUS .05f
-#define NUM_FISH 50
-#define DEPTH 1.75
-#define BAIT_RADIUS .1f
-#define AFFECTOR_THRESH 1.5f
+#define FISH_RADIUS .2f
+#define NUM_FISH 25
+#define DEPTH 10
+#define BAIT_RADIUS .5f
+
+
+// Disable complaints about all the placeholder functions
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+#include "components/LightingComponents.hpp"
+>>>>>>> MergeGameplay
 
 using namespace std;
-using namespace glm;
-
-// =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-        // Forward Declarations
-// =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 // draw Functions start general and get more specific
 
@@ -39,7 +44,7 @@ static void checkEatZone(int fish, Entity* entity, int numFish, float ***fishLoc
 static void updateGame(Entity* entity, double dt, float ***fishLoc, float ***headLoc, GLFWwindow* window, GameState &gstate);
 
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-        // GameplaySystem functions
+        // SwarmSystem functions
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 void GameplaySystem::update(ApplicationState &appstate, GameState &gstate, double elapsedTime, float ***fishLoc, float ***headLoc){
@@ -47,11 +52,15 @@ void GameplaySystem::update(ApplicationState &appstate, GameState &gstate, doubl
 
   Entity* sun = gstate.activeScene->getFirstWithComponent<SunLight>();
   SunLight* suncmpnt = sun->getFirstComponentType<SunLight>();
+<<<<<<< HEAD
   suncmpnt->setLocation(vec3(0.0, 10.0, 0.0) + -gstate.levelDirection*static_cast<float>(gstate.levelProgress));
+=======
+  suncmpnt->location = vec3(0.0, 10.0, 0.0) + -gstate.levelDirection*static_cast<float>(gstate.levelProgress);
   
   for(pair<const Entity*, Entity*> entpair : gstate.activeScene->entities){
     updateGame(entpair.second, elapsedTime, fishLoc, headLoc, appstate.window, gstate);
   }
+>>>>>>> MergeGameplay
 }
 
 static void updateGame(Entity* entity, double dt, float ***fishLoc, float ***headLoc, GLFWwindow* window, GameState &gstate) {

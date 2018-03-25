@@ -52,7 +52,7 @@ T Timeline<T>::elapsed(){
   if(paused){
     return(0.0);
   }else{
-    T tmp = (timeSource() - start + pausetime)-lastElapsed;
+    T tmp = timeSource()-lastElapsed;
     lastElapsed = timeSource();
     return(tmp);
   }
